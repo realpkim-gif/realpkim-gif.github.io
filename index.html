@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patrick Kim — Data Science</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F7F7F4;
+    --bg-panel: #FFFFFF;
+    --ink: #14171A;
+    --slate: #62697A;
+    --slate-light: #9AA0AC;
+    --line: #E3E3DE;
+    --accent: #3450E0;
+    --accent-soft: #EEF0FD;
+    --cat-nlp: #7B3FE4;
+    --cat-nlp-soft: #F2ECFD;
+    --cat-cv: #0E9A6C;
+    --cat-cv-soft: #E7F8F1;
+    --cat-data: #D97706;
+    --cat-data-soft: #FDF1E0;
+    --cat-game: #DB2777;
+    --cat-game-soft: #FCE9F2;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+
+  body{
+    background:
+      radial-gradient(560px 360px at 88% -8%, rgba(52,80,224,0.10), transparent 70%),
+      radial-gradient(480px 320px at -6% 18%, rgba(123,63,228,0.07), transparent 70%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.is-visible{ opacity:1; transform:translateY(0); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; }
+  }
+
+  a{ color:inherit; text-decoration:none; }
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:2px; }
+
+  .wrap{ max-width:1040px; margin:0 auto; padding:0 32px; }
+
+  /* ---------- NAV ---------- */
+  header{
+    position:sticky; top:0; z-index:10;
+    background:rgba(247,247,244,0.88);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 32px; max-width:1040px; margin:0 auto;
+  }
+  .logo{
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px; font-weight:500;
+    letter-spacing:-0.02em;
+  }
+  .logo span{ color:var(--accent); }
+  .nav-links{ display:flex; gap:32px; font-size:14px; color:var(--slate); }
+  .nav-links a{ transition:color 0.15s ease; }
+  .nav-links a:hover{ color:var(--ink); }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    padding:96px 0 88px;
+    display:grid;
+    grid-template-columns:1.1fr 0.9fr;
+    gap:56px;
+    align-items:center;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    color:var(--accent);
+    letter-spacing:0.04em;
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:22px;
+  }
+  .eyebrow::before{
+    content:''; width:7px; height:7px; border-radius:50%;
+    background:var(--accent);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:1; } 50%{ opacity:0.35; }
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:clamp(38px, 5vw, 58px);
+    line-height:1.08;
+    letter-spacing:-0.01em;
+    margin-bottom:22px;
+  }
+  h1 em{
+    font-style:italic;
+    color:var(--accent);
+    font-weight:400;
+  }
+  .hero p{
+    color:var(--slate);
+    font-size:16.5px;
+    max-width:440px;
+    margin-bottom:32px;
+  }
+  .hero-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+  .btn{
+    padding:12px 22px;
+    border-radius:6px;
+    font-size:14px;
+    font-weight:500;
+    transition:all 0.15s ease;
+    border:1px solid transparent;
+    display:inline-block;
+  }
+  .btn-primary{ background:var(--ink); color:#fff; }
+  .btn-primary:hover{ background:var(--accent); }
+  .btn-ghost{ border-color:var(--line); color:var(--ink); }
+  .btn-ghost:hover{ border-color:var(--ink); }
+
+  /* ---------- CHART SIGNATURE ---------- */
+  .chart-card{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:22px 22px 16px;
+    box-shadow:0 1px 2px rgba(20,23,26,0.03);
+    transition:transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .chart-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 14px 28px rgba(20,23,26,0.08);
+  }
+  .chart-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:12px;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .chart-head .title{ font-size:12px; color:var(--slate); }
+  .chart-head .metric{ font-size:12px; color:var(--accent); }
+  svg.plot{ width:100%; height:auto; display:block; }
+  .plot .grid-line{ stroke:var(--line); stroke-width:1; }
+  .plot .axis{ stroke:var(--slate-light); stroke-width:1; }
+  .plot .fit-line{
+    stroke:var(--accent); stroke-width:2; fill:none;
+    stroke-dasharray:340; stroke-dashoffset:340;
+    animation:draw 1.6s ease forwards 0.3s;
+  }
+  @keyframes draw{ to{ stroke-dashoffset:0; } }
+  .plot .dot{
+    fill:var(--ink); opacity:0;
+    animation:pop 0.4s ease forwards;
+  }
+  @keyframes pop{ to{ opacity:0.72; } }
+  .chart-foot{
+    display:flex; justify-content:space-between;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; color:var(--slate-light);
+    margin-top:8px;
+  }
+
+  /* ---------- SECTION HEADS ---------- */
+  section{ padding:72px 0; border-top:1px solid var(--line); }
+  .section-head{
+    display:flex; align-items:baseline; gap:14px;
+    margin-bottom:40px;
+  }
+  .section-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; color:var(--slate-light);
+  }
+  .section-head h2{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:26px;
+  }
+
+  /* ---------- ABOUT ---------- */
+  .about-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:48px;
+  }
+  .about-grid p{ color:var(--slate); font-size:15.5px; margin-bottom:16px; }
+  .focus-tags{ display:flex; flex-direction:column; gap:14px; }
+  .focus-tags .label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; color:var(--slate-light);
+    text-transform:uppercase; letter-spacing:0.06em;
+    margin-bottom:2px;
+  }
+  .focus-tags .pills{ display:flex; flex-wrap:wrap; gap:10px; }
+  .pill{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 14px;
+    border-radius:20px;
+    font-size:13.5px; font-weight:500;
+    border:1px solid var(--line);
+    background:var(--bg-panel);
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .pill:hover{ transform:translateY(-2px); box-shadow:0 8px 16px rgba(20,23,26,0.06); }
+  .pill .dot{ width:8px; height:8px; border-radius:50%; }
+  .pill[data-cat="nlp"] .dot{ background:var(--cat-nlp); }
+  .pill[data-cat="cv"] .dot{ background:var(--cat-cv); }
+  .pill[data-cat="data"] .dot{ background:var(--cat-data); }
+  .pill[data-cat="game"] .dot{ background:var(--cat-game); }
+
+  /* ---------- PROJECTS ---------- */
+  .proj-list{ display:flex; flex-direction:column; }
+  .proj{
+    display:grid;
+    grid-template-columns:110px 1fr auto;
+    gap:24px;
+    align-items:start;
+    padding:26px 0;
+    border-bottom:1px solid var(--line);
+    transition:padding-left 0.2s ease;
+  }
+  .proj:hover{ padding-left:8px; }
+  .proj:last-child{ border-bottom:none; }
+  .proj-tag{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    color:var(--accent);
+    background:var(--accent-soft);
+    padding:5px 9px;
+    border-radius:5px;
+    width:fit-content;
+    white-space:nowrap;
+  }
+  .proj-tag[data-cat="nlp"]{ color:var(--cat-nlp); background:var(--cat-nlp-soft); }
+  .proj-tag[data-cat="cv"]{ color:var(--cat-cv); background:var(--cat-cv-soft); }
+  .proj-tag[data-cat="data"]{ color:var(--cat-data); background:var(--cat-data-soft); }
+  .proj-tag[data-cat="game"]{ color:var(--cat-game); background:var(--cat-game-soft); }
+  .proj-body h3{ font-size:17px; font-weight:600; margin-bottom:6px; }
+  .proj-body h3 a{ transition:color 0.15s ease; }
+  .proj-body h3 a:hover{ color:var(--accent); }
+  .proj-body p{ color:var(--slate); font-size:14px; max-width:520px; }
+  .proj-metric{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px; color:var(--ink);
+    text-align:right;
+    white-space:nowrap;
+  }
+  .proj-metric span{ display:block; font-size:10.5px; color:var(--slate-light); margin-top:2px; }
+
+  /* ---------- SKILLS ---------- */
+  .skill-matrix{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  .skill-cell{
+    background:var(--bg-panel);
+    padding:18px 20px;
+    transition:background 0.15s ease;
+  }
+  .skill-cell:hover{ background:var(--accent-soft); }
+  .skill-cell .cat{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10.5px; color:var(--slate-light);
+    text-transform:uppercase; letter-spacing:0.05em;
+    margin-bottom:8px;
+  }
+  .skill-cell .items{ font-size:13.5px; color:var(--ink); line-height:1.7; }
+
+  /* ---------- CONTACT / FOOTER ---------- */
+  footer{
+    border-top:1px solid var(--line);
+    padding:56px 0 40px;
+  }
+  .footer-inner{
+    display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:24px;
+  }
+  footer h2{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:30px;
+    max-width:420px;
+    margin-bottom:8px;
+  }
+  footer p{ color:var(--slate); font-size:14.5px; }
+  .footer-links{ display:flex; gap:22px; font-size:14px; }
+  .footer-links a{ color:var(--slate); transition:color 0.15s ease; }
+  .footer-links a:hover{ color:var(--ink); }
+  .copyright{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; color:var(--slate-light);
+    margin-top:40px;
+  }
+
+  @media (max-width: 760px){
+    .hero{ grid-template-columns:1fr; padding:56px 0 48px; }
+    .about-grid{ grid-template-columns:1fr; }
+    .proj{ grid-template-columns:1fr; }
+    .proj-metric{ text-align:left; }
+    nav{ padding:16px 20px; }
+    .wrap{ padding:0 20px; }
+    .nav-links{ gap:18px; font-size:13px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <div class="logo">patrick<span>.</span>kim</div>
+    <div class="nav-links">
+      <a href="#work">Work</a>
+      <a href="#about">About</a>
+      <a href="#skills">Skills</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap">
+
+  <!-- HERO -->
+  <section class="hero" style="border-top:none;">
+    <div>
+      <div class="eyebrow">OPEN TO NEW COLLABORATIONS</div>
+      <h1>I turn messy data<br>into models that <em>hold up</em>.</h1>
+      <p>Data science intern exploring machine learning across NLP, computer vision, and applied data analysis — currently working toward a college program focused on ML.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#work">View projects</a>
+        <a class="btn btn-ghost" href="#contact">Get in touch</a>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <span class="title">about.md</span>
+      </div>
+      <p style="color:var(--slate); font-size:14.5px; margin-bottom:14px;">I like taking a problem apart to see which model actually fits it — comparing lexicon-based and transformer sentiment models, or pitting a hand-built CNN against ResNet50 and YOLO on the same task, rather than reaching for whichever tool is trendiest.</p>
+      <p style="color:var(--slate); font-size:14.5px;">Most of my work lives in Jupyter notebooks: NLP model comparisons, medical image detection, and data analysis projects built with pandas, numpy, and scikit-learn.</p>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="reveal">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>About</h2>
+    </div>
+    <div class="about-grid">
+      <div>
+        <p>I'm a data science intern working toward a college program focused on machine learning. I like comparing approaches side by side — running several models against the same problem to see which assumptions actually hold up on real data.</p>
+        <p>My projects span NLP, computer vision, and data analysis, usually built out in Jupyter notebooks as I learn a new technique well enough to compare it against the ones I already know.</p>
+      </div>
+      <div class="focus-tags">
+        <span class="label">Current focus areas</span>
+        <div class="pills">
+          <span class="pill" data-cat="nlp"><span class="dot"></span>NLP &amp; sentiment analysis</span>
+          <span class="pill" data-cat="cv"><span class="dot"></span>Computer vision</span>
+          <span class="pill" data-cat="data"><span class="dot"></span>Data analysis</span>
+          <span class="pill" data-cat="game"><span class="dot"></span>Game dev</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section id="work" class="reveal">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>Selected work</h2>
+    </div>
+    <div class="proj-list">
+      <div class="proj">
+        <span class="proj-tag" data-cat="nlp">nlp</span>
+        <div class="proj-body">
+          <h3><a href="https://github.com/realpkim-gif/Sentiment_Analysis_Comparisons" target="_blank" rel="noopener">Sentiment analysis comparisons</a></h3>
+          <p>Benchmarking lexicon-based methods (AFINN, NRC, SentiWordNet) against library and model-based approaches (TextBlob, spaCy, Stanza, Flair) on the same text.</p>
+        </div>
+        <div class="proj-metric">6+ methods<span>compared</span></div>
+      </div>
+      <div class="proj">
+        <span class="proj-tag" data-cat="cv">computer vision</span>
+        <div class="proj-body">
+          <h3><a href="https://github.com/realpkim-gif/BoneProject" target="_blank" rel="noopener">Bone fracture detection: CNN vs. ResNet50 vs. YOLO</a></h3>
+          <p>Comparing a custom CNN coordinate regressor, ResNet50 transfer learning, and a YOLOv8-OBB detector for locating fractures in X-ray images.</p>
+        </div>
+        <div class="proj-metric">3 architectures<span>head-to-head</span></div>
+      </div>
+      <div class="proj">
+        <span class="proj-tag" data-cat="cv">computer vision</span>
+        <div class="proj-body">
+          <h3><a href="https://github.com/realpkim-gif/MNIST_Detector" target="_blank" rel="noopener">MNIST digit detector</a></h3>
+          <p>Handwritten digit recognition on the MNIST dataset using OpenCV for image processing — an early hands-on project in classic computer vision.</p>
+        </div>
+        <div class="proj-metric">OpenCV<span>+ MNIST</span></div>
+      </div>
+      <div class="proj">
+        <span class="proj-tag" data-cat="data">data analysis</span>
+        <div class="proj-body">
+          <h3><a href="https://github.com/realpkim-gif/BasketballSchoolDataProject" target="_blank" rel="noopener">School basketball data analysis</a></h3>
+          <p>A school data project exploring basketball statistics with pandas and numpy, visualized with matplotlib.</p>
+        </div>
+        <div class="proj-metric">pandas<span>+ numpy + matplotlib</span></div>
+      </div>
+      <div class="proj">
+        <span class="proj-tag" data-cat="game">game dev</span>
+        <div class="proj-body">
+          <h3><a href="https://github.com/realpkim-gif/Obby" target="_blank" rel="noopener">Obby</a></h3>
+          <p>A Mario-inspired obstacle course platformer built with pygame.</p>
+        </div>
+        <div class="proj-metric">pygame</div>
+      </div>
+      <div class="proj">
+        <span class="proj-tag" data-cat="game">game dev</span>
+        <div class="proj-body">
+          <h3><a href="https://github.com/realpkim-gif/Space_Invaders" target="_blank" rel="noopener">Space Invaders</a></h3>
+          <p>A Python recreation of the classic arcade shooter.</p>
+        </div>
+        <div class="proj-metric">pygame</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills" class="reveal">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>Skills &amp; tools</h2>
+    </div>
+    <div class="skill-matrix">
+      <div class="skill-cell">
+        <div class="cat">Languages</div>
+        <div class="items">Python</div>
+      </div>
+      <div class="skill-cell">
+        <div class="cat">Modeling</div>
+        <div class="items">TensorFlow / Keras · scikit-learn · ResNet50 · YOLOv8</div>
+      </div>
+      <div class="skill-cell">
+        <div class="cat">NLP</div>
+        <div class="items">spaCy · Stanza · Flair · TextBlob · lexicon-based sentiment (AFINN, NRC, SentiWordNet)</div>
+      </div>
+      <div class="skill-cell">
+        <div class="cat">Computer vision</div>
+        <div class="items">OpenCV · image classification &amp; object detection</div>
+      </div>
+      <div class="skill-cell">
+        <div class="cat">Data</div>
+        <div class="items">pandas · numpy</div>
+      </div>
+      <div class="skill-cell">
+        <div class="cat">Visualization</div>
+        <div class="items">matplotlib</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer id="contact">
+  <div class="wrap">
+    <div class="footer-inner">
+      <div>
+        <h2>Let's talk about your data.</h2>
+        <p>Open to consulting, collaborations, and interesting problems.</p>
+      </div>
+      <div class="footer-links">
+        <a href="mailto:real.pkim@gmail.com">Email</a>
+        <a href="https://github.com/realpkim-gif" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+    <div class="copyright">© 2026 Patrick Kim. Built with plain HTML &amp; CSS.</div>
+  </div>
+</footer>
+
+<script>
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting){
+        entry.target.classList.add('is-visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => io.observe(el));
+</script>
+</body>
+</html>
