@@ -95,9 +95,13 @@
     letter-spacing:-0.02em;
   }
   .logo span{ color:var(--accent); }
-  .nav-links{ display:flex; gap:32px; font-size:14px; color:var(--slate); }
-  .nav-links a{ transition:color 0.15s ease; }
-  .nav-links a:hover{ color:var(--ink); }
+  .nav-links{ display:flex; gap:10px; font-size:14px; color:var(--slate); }
+  .nav-links a{
+    padding:7px 13px;
+    border-radius:8px;
+    transition:color 0.18s ease, background 0.18s ease;
+  }
+  .nav-links a:hover{ color:var(--ink); background:rgba(20,23,26,0.06); }
 
   /* ---------- HERO ---------- */
   .hero{
@@ -317,7 +321,8 @@
     .proj-metric{ text-align:left; }
     nav{ padding:16px 20px; }
     .wrap{ padding:0 20px; }
-    .nav-links{ gap:18px; font-size:13px; }
+    .nav-links{ gap:2px; font-size:13px; }
+    .nav-links a{ padding:6px 9px; }
   }
 </style>
 </head>
