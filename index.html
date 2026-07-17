@@ -38,6 +38,14 @@
     overflow-x:hidden;
   }
 
+  #bg{
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    z-index:0;
+    pointer-events:none;
+  }
+  header, main, footer{ position:relative; z-index:1; }
+
   .reveal{ opacity:0; transform:translateY(24px); transition:opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
   .reveal.is-visible{ opacity:1; transform:translateY(0); }
   .reveal-item{ opacity:0; transform:translateY(16px); transition:opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1); }
@@ -304,7 +312,7 @@
   /* ---------- THOUGHTS ---------- */
   .thought-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
     gap:20px;
   }
   .thought{
@@ -364,12 +372,15 @@
     .proj-metric{ text-align:left; }
     nav{ padding:16px 20px; }
     .wrap{ padding:0 20px; }
-    .nav-links{ gap:2px; font-size:13px; }
-    .nav-links a{ padding:6px 9px; }
+    .nav-links{ gap:0; font-size:12.5px; }
+    .nav-links a{ padding:6px 7px; }
+    .logo{ font-size:13px; }
   }
 </style>
 </head>
 <body>
+
+<canvas id="bg" aria-hidden="true"></canvas>
 
 <header>
   <nav>
@@ -596,6 +607,241 @@
     });
   }, { threshold: 0.12 });
   revealEls.forEach(el => io.observe(el));
+
+  /* ---------- BACKGROUND CANVAS ---------- */
+  (function(){
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canvas = document.getElementById('bg');
+    const ctx = canvas.getContext('2d');
+    let W = 0, H = 0, DPR = 1;
+
+    function resize(){
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth; H = window.innerHeight;
+      canvas.width = W * DPR; canvas.height = H * DPR;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    /* ambient sparkles */
+    const COUNT = Math.min(90, Math.round(W * H / 16000));
+    const dots = [];
+    for (let i = 0; i < COUNT; i++){
+      dots.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
+        r: 0.8 + Math.random() * 1.4,
+        ph: Math.random() * Math.PI * 2,
+        sp: 0.4 + Math.random() * 0.8
+      });
+    }
+
+    /* hero constellation (3-4-3 network around cursor) */
+    const heroEl = document.querySelector('.hero');
+    const layers = [3, 4, 3];
+    const nodes = [];
+    layers.forEach((n, li) => {
+      for (let i = 0; i < n; i++){
+        nodes.push({
+          li,
+          tx: (li - 1) * 120,
+          ty: (i - (n - 1) / 2) * 52,
+          x: 0, y: 0, ph: Math.random() * Math.PI * 2
+        });
+      }
+    });
+    let mouse = { x: -9999, y: -9999 }, act = 0;
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+    /* wireframe shapes */
+    function icosa(){
+      const p = (1 + Math.sqrt(5)) / 2, v = [];
+      [[0,1,p],[0,1,-p],[0,-1,p],[0,-1,-p],[1,p,0],[1,-p,0],[-1,p,0],[-1,-p,0],[p,0,1],[-p,0,1],[p,0,-1],[-p,0,-1]]
+        .forEach(a => v.push(a));
+      const e = [];
+      let min = Infinity;
+      for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++){
+        const d = Math.hypot(v[i][0]-v[j][0], v[i][1]-v[j][1], v[i][2]-v[j][2]);
+        if (d < min) min = d;
+      }
+      for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++){
+        const d = Math.hypot(v[i][0]-v[j][0], v[i][1]-v[j][1], v[i][2]-v[j][2]);
+        if (d < min * 1.05) e.push([i, j]);
+      }
+      const s = 0.62;
+      return { v: v.map(a => a.map(c => c * s)), e };
+    }
+    function chip(){
+      const w = 1.15, h = 0.14, d = 1.15, v = [], e = [];
+      [[-w,-h,-d],[w,-h,-d],[w,-h,d],[-w,-h,d],[-w,h,-d],[w,h,-d],[w,h,d],[-w,h,d]].forEach(a => v.push(a));
+      e.push([0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]);
+      for (let i = 0; i < 4; i++){
+        const z = -0.78 + i * 0.52;
+        [[w, z, 1], [-w, z, -1]].forEach(([sx, sz, dir]) => {
+          v.push([sx, 0, z], [sx + 0.42 * dir, 0, z]);
+          e.push([v.length - 2, v.length - 1]);
+        });
+        v.push([z, 0, d], [z, 0, d + 0.42]); e.push([v.length - 2, v.length - 1]);
+        v.push([z, 0, -d], [z, 0, -d - 0.42]); e.push([v.length - 2, v.length - 1]);
+      }
+      return { v, e };
+    }
+    function rings(){
+      const v = [], e = [], SEG = 26;
+      for (let r = 0; r < 3; r++){
+        const base = v.length;
+        for (let i = 0; i < SEG; i++){
+          const a = i / SEG * Math.PI * 2, x = Math.cos(a), y = Math.sin(a);
+          if (r === 0) v.push([x, y, 0]);
+          if (r === 1) v.push([x * 0.82, 0, y * 0.82]);
+          if (r === 2) v.push([0, x * 0.64, y * 0.64]);
+        }
+        for (let i = 0; i < SEG; i++) e.push([base + i, base + (i + 1) % SEG]);
+      }
+      return { v, e };
+    }
+    function cubes(){
+      const v = [], e = [];
+      [0.85, 0.45].forEach(s => {
+        const base = v.length;
+        [[-s,-s,-s],[s,-s,-s],[s,s,-s],[-s,s,-s],[-s,-s,s],[s,-s,s],[s,s,s],[-s,s,s]].forEach(a => v.push(a));
+        e.push([base,base+1],[base+1,base+2],[base+2,base+3],[base+3,base],
+               [base+4,base+5],[base+5,base+6],[base+6,base+7],[base+7,base+4],
+               [base,base+4],[base+1,base+5],[base+2,base+6],[base+3,base+7]);
+      });
+      for (let i = 0; i < 8; i++) e.push([i, i + 8]);
+      return { v, e };
+    }
+    const sceneDefs = [
+      { sel: '#about',    shape: icosa(), side: 0.84, spin: 0.00022 },
+      { sel: '#work',     shape: chip(),  side: 0.14, spin: 0.00018 },
+      { sel: '#skills',   shape: rings(), side: 0.85, spin: 0.00026 },
+      { sel: '#thoughts', shape: cubes(), side: 0.13, spin: 0.0002 }
+    ].map(s => ({ ...s, el: document.querySelector(s.sel) })).filter(s => s.el);
+
+    function drawShape(def, t){
+      const rect = def.el.getBoundingClientRect();
+      if (rect.bottom < -80 || rect.top > H + 80) return;
+      const mid = rect.top + rect.height / 2;
+      const dist = Math.abs(mid - H / 2) / (H * 0.85);
+      const op = Math.max(0, 1 - dist) * 0.14;
+      if (op <= 0.004) return;
+      const cx = W * def.side;
+      const cy = mid;
+      const scale = Math.min(W, H) * 0.16;
+      const ry = t * def.spin + window.scrollY * 0.0011;
+      const rx = 0.42 + Math.sin(t * 0.00012) * 0.1;
+      const cosY = Math.cos(ry), sinY = Math.sin(ry);
+      const cosX = Math.cos(rx), sinX = Math.sin(rx);
+      const pts = def.shape.v.map(([x, y, z]) => {
+        let px = x * cosY + z * sinY, pz = -x * sinY + z * cosY;
+        let py = y * cosX - pz * sinX; pz = y * sinX + pz * cosX;
+        const f = 3.4 / (3.4 + pz);
+        return [cx + px * scale * f, cy + py * scale * f];
+      });
+      ctx.strokeStyle = 'rgba(20,23,26,' + op + ')';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      def.shape.e.forEach(([a, b]) => {
+        ctx.moveTo(pts[a][0], pts[a][1]);
+        ctx.lineTo(pts[b][0], pts[b][1]);
+      });
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(20,23,26,' + op * 1.4 + ')';
+      pts.forEach(p => { ctx.fillRect(p[0] - 1, p[1] - 1, 2, 2); });
+    }
+
+    function frame(t){
+      ctx.clearRect(0, 0, W, H);
+
+      /* sparkles */
+      for (const d of dots){
+        d.x += d.vx; d.y += d.vy;
+        if (d.x < -5) d.x = W + 5; if (d.x > W + 5) d.x = -5;
+        if (d.y < -5) d.y = H + 5; if (d.y > H + 5) d.y = -5;
+        const tw = 0.04 + (Math.sin(t * 0.001 * d.sp + d.ph) + 1) * 0.055;
+        ctx.fillStyle = 'rgba(20,23,26,' + tw + ')';
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      /* wireframes */
+      sceneDefs.forEach(def => drawShape(def, t));
+
+      /* hero constellation */
+      if (heroEl){
+        const hr = heroEl.getBoundingClientRect();
+        const inHero = mouse.y >= hr.top && mouse.y <= hr.bottom && mouse.x >= 0 && hr.bottom > 0;
+        act += ((inHero ? 1 : 0) - act) * 0.06;
+        for (const n of nodes){
+          const wob = Math.sin(t * 0.0012 + n.ph) * 5;
+          const gx = mouse.x + n.tx, gy = mouse.y + n.ty + wob;
+          if (act <= 0.01){ n.x = gx; n.y = gy; }       /* snap while invisible */
+          else { n.x += (gx - n.x) * 0.09; n.y += (gy - n.y) * 0.09; }
+        }
+        if (act > 0.01){
+          ctx.strokeStyle = 'rgba(52,80,224,' + 0.10 * act + ')';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (const a of nodes) for (const b of nodes){
+            if (b.li === a.li + 1){ ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
+          }
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(52,80,224,' + 0.4 * act + ')';
+          for (const n of nodes){
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      if (!reduced) requestAnimationFrame(frame);
+    }
+
+    if (reduced){
+      frame(0);            /* single static frame */
+    } else {
+      requestAnimationFrame(frame);
+    }
+  })();
+
+  /* ---------- SMOOTH WHEEL SCROLLING ---------- */
+  (function(){
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    if (reduced || coarse) return;   /* native scrolling on touch / reduced motion */
+
+    let target = window.scrollY, current = window.scrollY, raf = null;
+
+    function max(){ return document.documentElement.scrollHeight - window.innerHeight; }
+
+    function loop(){
+      current += (target - current) * 0.11;
+      if (Math.abs(target - current) < 0.5){
+        current = target;
+        raf = null;
+      } else {
+        raf = requestAnimationFrame(loop);
+      }
+      window.scrollTo(0, current);
+    }
+
+    window.addEventListener('wheel', e => {
+      if (e.ctrlKey) return;          /* keep pinch-zoom native */
+      e.preventDefault();
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1);
+      target = Math.max(0, Math.min(max(), target + dy));
+      if (!raf) raf = requestAnimationFrame(loop);
+    }, { passive: false });
+
+    /* keep in sync when scrolling via keyboard, anchors, or scrollbar */
+    window.addEventListener('scroll', () => {
+      if (raf === null){ target = window.scrollY; current = window.scrollY; }
+    });
+  })();
 </script>
 </body>
 </html>
