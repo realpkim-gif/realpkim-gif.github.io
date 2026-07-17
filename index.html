@@ -38,8 +38,15 @@
     overflow-x:hidden;
   }
 
-  .reveal{ opacity:0; transform:translateY(18px); transition:opacity 0.6s ease, transform 0.6s ease; }
+  .reveal{ opacity:0; transform:translateY(24px); transition:opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
   .reveal.is-visible{ opacity:1; transform:translateY(0); }
+  .reveal-item{ opacity:0; transform:translateY(16px); transition:opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1); }
+  .is-visible .reveal-item{ opacity:1; transform:translateY(0); }
+  .is-visible .reveal-item:nth-child(2){ transition-delay:0.08s; }
+  .is-visible .reveal-item:nth-child(3){ transition-delay:0.16s; }
+  .is-visible .reveal-item:nth-child(4){ transition-delay:0.24s; }
+  .is-visible .reveal-item:nth-child(5){ transition-delay:0.32s; }
+  .is-visible .reveal-item:nth-child(6){ transition-delay:0.40s; }
 
   /* ---------- ENTRANCE MOTION ---------- */
   @keyframes rise-in{
@@ -105,7 +112,8 @@
 
   /* ---------- HERO ---------- */
   .hero{
-    padding:96px 0 88px;
+    min-height:82vh;
+    padding:110px 0 100px;
     display:grid;
     grid-template-columns:1.1fr 0.9fr;
     gap:56px;
@@ -177,7 +185,7 @@
   }
 
   /* ---------- SECTION HEADS ---------- */
-  section{ padding:88px 0; border-top:1px solid var(--line); }
+  section{ padding:128px 0; border-top:1px solid var(--line); }
   .section-head{
     display:flex; align-items:baseline; gap:14px;
     margin-bottom:40px;
@@ -293,6 +301,32 @@
   }
   .skill-cell .items{ font-size:13.5px; color:var(--ink); line-height:1.7; }
 
+  /* ---------- THOUGHTS ---------- */
+  .thought-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+    gap:20px;
+  }
+  .thought{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:24px 24px 22px;
+    transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .thought:hover{
+    transform:translateY(-3px);
+    box-shadow:0 12px 24px rgba(20,23,26,0.07);
+    border-color:var(--slate-light);
+  }
+  .thought .t-num{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; color:var(--accent);
+    margin-bottom:10px; display:block;
+  }
+  .thought h3{ font-size:16px; font-weight:600; margin-bottom:8px; }
+  .thought p{ color:var(--slate); font-size:14px; }
+
   /* ---------- CONTACT / FOOTER ---------- */
   footer{
     border-top:1px solid var(--line);
@@ -344,6 +378,7 @@
       <a href="#work">Work</a>
       <a href="#about">About</a>
       <a href="#skills">Skills</a>
+      <a href="#thoughts">Thoughts</a>
       <a href="#contact">Contact</a>
     </div>
   </nav>
@@ -386,10 +421,10 @@
       <div class="focus-tags">
         <span class="label">Current focus areas</span>
         <div class="pills">
-          <span class="pill" data-cat="nlp"><span class="dot"></span>NLP &amp; sentiment analysis</span>
-          <span class="pill" data-cat="cv"><span class="dot"></span>Computer vision</span>
-          <span class="pill" data-cat="data"><span class="dot"></span>Data analysis</span>
-          <span class="pill" data-cat="game"><span class="dot"></span>Game dev</span>
+          <span class="pill reveal-item" data-cat="nlp"><span class="dot"></span>NLP &amp; sentiment analysis</span>
+          <span class="pill reveal-item" data-cat="cv"><span class="dot"></span>Computer vision</span>
+          <span class="pill reveal-item" data-cat="data"><span class="dot"></span>Data analysis</span>
+          <span class="pill reveal-item" data-cat="game"><span class="dot"></span>Game dev</span>
         </div>
       </div>
     </div>
@@ -475,29 +510,59 @@
       <h2>Skills &amp; tools</h2>
     </div>
     <div class="skill-matrix">
-      <div class="skill-cell">
+      <div class="skill-cell reveal-item">
         <div class="cat">Languages</div>
         <div class="items">Python</div>
       </div>
-      <div class="skill-cell">
+      <div class="skill-cell reveal-item">
         <div class="cat">Modeling</div>
         <div class="items">TensorFlow / Keras · scikit-learn · ResNet50 · YOLOv8</div>
       </div>
-      <div class="skill-cell">
+      <div class="skill-cell reveal-item">
         <div class="cat">NLP</div>
         <div class="items">spaCy · Stanza · Flair · TextBlob · lexicon-based sentiment (AFINN, NRC, SentiWordNet)</div>
       </div>
-      <div class="skill-cell">
+      <div class="skill-cell reveal-item">
         <div class="cat">Computer vision</div>
         <div class="items">OpenCV · image classification &amp; object detection</div>
       </div>
-      <div class="skill-cell">
+      <div class="skill-cell reveal-item">
         <div class="cat">Data</div>
         <div class="items">pandas · numpy</div>
       </div>
-      <div class="skill-cell">
+      <div class="skill-cell reveal-item">
         <div class="cat">Visualization</div>
         <div class="items">matplotlib</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THOUGHTS -->
+  <section id="thoughts" class="reveal">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2>What I think about</h2>
+    </div>
+    <div class="thought-grid">
+      <div class="thought reveal-item">
+        <span class="t-num">/01</span>
+        <h3>Honest evaluation</h3>
+        <p>A model is only as good as the comparison behind it. I care about fair baselines, clean train/test splits, and reporting what didn't work — not just the best number.</p>
+      </div>
+      <div class="thought reveal-item">
+        <span class="t-num">/02</span>
+        <h3>Ethics in ML</h3>
+        <p>Models inherit the biases of their data. Working with messy real-world text showed me how easily preprocessing choices quietly change what a model learns.</p>
+      </div>
+      <div class="thought reveal-item">
+        <span class="t-num">/03</span>
+        <h3>Technology and society</h3>
+        <p>ML systems increasingly shape decisions people never see. I think the people building them should understand the consequences, not just the architecture.</p>
+      </div>
+      <div class="thought reveal-item">
+        <span class="t-num">/04</span>
+        <h3>Learning in the open</h3>
+        <p>I keep my projects public, including the early ones. Watching my own repos improve over time matters more to me than only showing polished work.</p>
       </div>
     </div>
   </section>
