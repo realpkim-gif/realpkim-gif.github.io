@@ -1042,13 +1042,15 @@
             : null;
           fctx.save();
           for (const nd of net){
-            const hot = hovered && hovered.nd === nd;
-            nd.hs = (nd.hs || 0) + ((hot ? 1 : 0) - nd.hs) * 0.16;
+            /* nodes swell smoothly as the cursor nears, with distance falloff */
+            const dm = mouse.x > -999 ? Math.hypot(nd.x - mouse.x, nd.y - mouse.y) : 1e9;
+            const tgt = form > 0.6 ? Math.max(0, 1 - dm / 95) : 0;
+            nd.hs = (nd.hs || 0) + (tgt - nd.hs) * 0.18;
             fctx.shadowColor = 'rgba(' + LAYER_COLS[nd.li] + ',0.8)';
-            fctx.shadowBlur = (10 + 18 * nd.hs) * form;
-            fctx.fillStyle = 'rgba(' + LAYER_COLS[nd.li] + ',' + (0.4 + 0.5 * form) * fadeOut + ')';
+            fctx.shadowBlur = (10 + 22 * nd.hs) * form;
+            fctx.fillStyle = 'rgba(' + LAYER_COLS[nd.li] + ',' + Math.min(1, (0.4 + 0.5 * form) * fadeOut + 0.25 * nd.hs) + ')';
             fctx.beginPath();
-            fctx.arc(nd.x, nd.y, (2 + 1.8 * form) * (1 + 1.5 * nd.hs), 0, Math.PI * 2);
+            fctx.arc(nd.x, nd.y, (2 + 1.8 * form) * (1 + 2.1 * nd.hs), 0, Math.PI * 2);
             fctx.fill();
           }
           fctx.restore();
