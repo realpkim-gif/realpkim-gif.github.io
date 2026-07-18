@@ -120,12 +120,33 @@
   .nav-links a:hover{ color:var(--ink); background:rgba(20,23,26,0.06); }
 
   /* ---------- HERO ---------- */
-  .hero-stage{ height:260vh; }
-  .hero-pin{
+  /* ---------- INTRO (name + DNN scrollytelling) ---------- */
+  .intro-stage{ height:300vh; }
+  .intro-pin{
     position:sticky; top:0; height:100vh;
-    display:flex; align-items:center;
+    display:flex; align-items:center; justify-content:center;
     overflow:hidden;
   }
+  .intro-name{ position:relative; z-index:2; text-align:center; will-change:opacity, transform, filter; }
+  .big-name{
+    font-size:clamp(56px, 11vw, 150px);
+    font-weight:700;
+    letter-spacing:-0.035em;
+    line-height:1.02;
+  }
+  .big-sub{
+    font-family:'JetBrains Mono', monospace;
+    font-size:clamp(12px, 1.5vw, 16px);
+    letter-spacing:0.08em;
+    color:var(--slate);
+    margin-top:20px;
+  }
+  html.lenis{ scroll-behavior:auto; }
+  @media (max-width: 760px), (prefers-reduced-motion: reduce){
+    .intro-stage{ height:auto; }
+    .intro-pin{ position:static; height:auto; padding:120px 0 40px; }
+  }
+
   .hero{
     width:100%;
     padding:60px 0 40px;
@@ -143,8 +164,6 @@
   }
   @keyframes hint-bob{ 0%,100%{ transform:translateX(-50%) translateY(0); } 50%{ transform:translateX(-50%) translateY(6px); } }
   @media (max-width: 760px){
-    .hero-stage{ height:auto; }
-    .hero-pin{ position:static; height:auto; display:block; overflow:visible; }
     .scroll-hint{ display:none; }
   }
   .eyebrow{
@@ -440,10 +459,19 @@
 
 <main class="wrap">
 
+  <!-- INTRO -->
+  <div class="intro-stage">
+    <div class="intro-pin">
+      <div class="intro-name">
+        <h1 class="big-name">Patrick Kim</h1>
+        <p class="big-sub">ASPIRING DATA SCIENCE / ML RESEARCHER</p>
+      </div>
+      <div class="scroll-hint" aria-hidden="true">SCROLL</div>
+    </div>
+  </div>
+
   <!-- HERO -->
-  <div class="hero-stage">
-  <div class="hero-pin">
-  <section class="hero" id="heroSection" style="border-top:none;">
+  <section class="hero reveal" id="heroSection" style="border-top:none;">
     <div class="hero-enter">
       <div class="eyebrow">STUDENT DEVELOPER · DATA SCIENCE INTERN</div>
       <h1>I build and compare ML models to see what <span>actually works</span>.</h1>
@@ -462,9 +490,6 @@
       <p style="color:var(--slate); font-size:14.5px;">Recently: trained and evaluated a custom CNN, ResNet50 transfer learning, and YOLOv8 on an X-ray fracture dataset to learn computer vision end to end.</p>
     </div>
   </section>
-  <div class="scroll-hint" aria-hidden="true">SCROLL</div>
-  </div>
-  </div>
 
   <!-- ABOUT -->
   <section id="about" class="reveal">
@@ -652,6 +677,9 @@
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
 <script>
   const revealEls = document.querySelectorAll('.reveal, .stagger');
   const io = new IntersectionObserver((entries) => {
@@ -708,17 +736,18 @@
       });
     }
 
-    /* scroll-driven DNN: noise assembles into a 4-6-6-4 network */
-    const heroStage = document.querySelector('.hero-stage');
-    const heroSection = document.getElementById('heroSection');
-    const LAYERS = [4, 6, 6, 4];
+    /* scroll-driven DNN: noise assembles into a 5-8-8-8-5 network in the intro */
+    const introStage = document.querySelector('.intro-stage');
+    const LAYERS = [5, 8, 8, 8, 5];
+    const LAYER_NAMES = ['input', 'hidden_1', 'hidden_2', 'hidden_3', 'output'];
+    const LAYER_COLS = ['14,154,108', '123,63,228', '52,80,224', '123,63,228', '219,39,119'];
     const MAXROW = Math.max(...LAYERS);
     const net = [];
     let seed = 42;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     LAYERS.forEach((n, li) => {
       for (let i = 0; i < n; i++){
-        net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, x: 0, y: 0 });
+        net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, w: (rnd() - 0.5) * 2, x: 0, y: 0 });
       }
     });
     const smooth = (a, b, x) => {
@@ -786,10 +815,10 @@
       return { v, e };
     }
     const sceneDefs = [
-      { sel: '#about',    shape: icosa(), side: 1, spin: 0.00022 },
-      { sel: '#work',     shape: chip(),  side: -1, spin: 0.00018 },
-      { sel: '#skills',   shape: wave(),  side: 1, spin: 0.00008, wave: true },
-      { sel: '#thoughts', shape: cubes(), side: -1, spin: 0.0002 }
+      { sel: '#about',    shape: icosa(), side: 1,  spin: 0.00022, col: '52,80,224' },
+      { sel: '#work',     shape: chip(),  side: -1, spin: 0.00018, col: '14,154,108' },
+      { sel: '#skills',   shape: wave(),  side: 1,  spin: 0.00008, wave: true, col: '123,63,228' },
+      { sel: '#thoughts', shape: cubes(), side: -1, spin: 0.0002,  col: '219,39,119' }
     ].map(s => ({ ...s, el: document.querySelector(s.sel) })).filter(s => s.el);
 
     function drawShape(def, t){
@@ -819,7 +848,7 @@
         const f = 3.4 / (3.4 + pz);
         return [cx + px * scale * f, cy + py * scale * f];
       });
-      ctx.strokeStyle = 'rgba(20,23,26,' + op + ')';
+      ctx.strokeStyle = 'rgba(' + def.col + ',' + op + ')';
       ctx.lineWidth = 1.25;
       ctx.beginPath();
       def.shape.e.forEach(([a, b]) => {
@@ -827,7 +856,7 @@
         ctx.lineTo(pts[b][0], pts[b][1]);
       });
       ctx.stroke();
-      ctx.fillStyle = 'rgba(20,23,26,' + Math.min(op * 1.5, 0.5) + ')';
+      ctx.fillStyle = 'rgba(' + def.col + ',' + Math.min(op * 1.6, 0.55) + ')';
       pts.forEach(p => { ctx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
     }
 
@@ -851,59 +880,87 @@
 
       /* scroll-driven DNN on foreground canvas */
       fctx.clearRect(0, 0, W, H);
-      if (heroStage && W > 760){
-        const r = heroStage.getBoundingClientRect();
+      if (introStage && W > 760){
+        const r = introStage.getBoundingClientRect();
         const span = r.height - H;
         const p = span > 60 ? Math.max(0, Math.min(1, -r.top / span)) : 0;
-        const form = smooth(0.06, 0.55, p);
-        const fadeOut = 1 - smooth(0.84, 0.99, p);
+        const form = smooth(0.04, 0.45, p);
+        const fadeOut = 1 - smooth(0.86, 0.99, p);
         if (r.bottom > 0 && fadeOut > 0.02){
           const cx = W / 2, cy = H / 2;
-          const lw = Math.min(W * 0.62, 780);
-          const lh = Math.min(H * 0.56, 460);
+          const lw = Math.min(W * 0.78, 1080);
+          const lh = Math.min(H * 0.68, 560);
           for (const nd of net){
             const tx = cx + (nd.li / (LAYERS.length - 1) - 0.5) * lw;
             const ty = cy + (nd.i - (nd.n - 1) / 2) * (lh / MAXROW);
             const wob = Math.sin(t * 0.0011 + nd.ph) * 6 * form;
-            const mx = (mouse.x > -999 ? (mouse.x - cx) * 0.045 : 0) * form;
-            const my = (mouse.y > -999 ? (mouse.y - cy) * 0.045 : 0) * form;
+            const mx = (mouse.x > -999 ? (mouse.x - cx) * 0.05 : 0) * form;
+            const my = (mouse.y > -999 ? (mouse.y - cy) * 0.05 : 0) * form;
             nd.x = nd.nx * W + (tx - nd.nx * W) * form + mx;
             nd.y = nd.ny * H + (ty - nd.ny * H) * form + my + wob;
           }
-          const ea = 0.30 * form * fadeOut;
-          if (ea > 0.01){
-            fctx.strokeStyle = 'rgba(52,80,224,' + ea + ')';
+          /* edges, colored by source layer */
+          if (form > 0.03){
             fctx.lineWidth = 1;
-            fctx.beginPath();
-            for (const a of net) for (const b of net){
-              if (b.li === a.li + 1){ fctx.moveTo(a.x, a.y); fctx.lineTo(b.x, b.y); }
+            for (let li = 0; li < LAYERS.length - 1; li++){
+              fctx.strokeStyle = 'rgba(' + LAYER_COLS[li] + ',' + 0.22 * form * fadeOut + ')';
+              fctx.beginPath();
+              for (const a of net) for (const b of net){
+                if (a.li === li && b.li === li + 1){ fctx.moveTo(a.x, a.y); fctx.lineTo(b.x, b.y); }
+              }
+              fctx.stroke();
             }
-            fctx.stroke();
           }
+          /* nodes, colored by layer */
+          const hovered = (form > 0.7 && mouse.x > -999)
+            ? net.reduce((best, nd) => {
+                const d = Math.hypot(nd.x - mouse.x, nd.y - mouse.y);
+                return d < 30 && (!best || d < best.d) ? { nd, d } : best;
+              }, null)
+            : null;
           fctx.save();
-          fctx.shadowColor = 'rgba(52,80,224,0.7)';
-          fctx.shadowBlur = 10 * form;
-          fctx.fillStyle = 'rgba(52,80,224,' + (0.35 + 0.45 * form) * fadeOut + ')';
           for (const nd of net){
+            const hot = hovered && hovered.nd === nd;
+            fctx.shadowColor = 'rgba(' + LAYER_COLS[nd.li] + ',0.8)';
+            fctx.shadowBlur = (hot ? 18 : 10) * form;
+            fctx.fillStyle = 'rgba(' + LAYER_COLS[nd.li] + ',' + (0.4 + 0.5 * form) * fadeOut + ')';
             fctx.beginPath();
-            fctx.arc(nd.x, nd.y, 2 + 1.6 * form, 0, Math.PI * 2);
+            fctx.arc(nd.x, nd.y, (2 + 1.8 * form) * (hot ? 1.9 : 1), 0, Math.PI * 2);
             fctx.fill();
           }
           fctx.restore();
+          /* futuristic HUD readout on hover */
+          if (hovered){
+            const nd = hovered.nd;
+            const col = LAYER_COLS[nd.li];
+            const bw = 168, bh = 66;
+            let bx = nd.x + 20, by = nd.y - bh - 14;
+            if (bx + bw > W - 12) bx = nd.x - bw - 20;
+            if (by < 12) by = nd.y + 18;
+            fctx.strokeStyle = 'rgba(' + col + ',0.85)';
+            fctx.lineWidth = 1;
+            fctx.beginPath();
+            fctx.moveTo(nd.x, nd.y);
+            fctx.lineTo(bx + (bx > nd.x ? 0 : bw), by + bh);
+            fctx.stroke();
+            fctx.fillStyle = 'rgba(20,23,26,0.88)';
+            fctx.fillRect(bx, by, bw, bh);
+            fctx.strokeRect(bx, by, bw, bh);
+            /* corner ticks */
+            fctx.beginPath();
+            fctx.moveTo(bx - 4, by + 8); fctx.lineTo(bx - 4, by - 4); fctx.lineTo(bx + 8, by - 4);
+            fctx.moveTo(bx + bw + 4, by + bh - 8); fctx.lineTo(bx + bw + 4, by + bh + 4); fctx.lineTo(bx + bw - 8, by + bh + 4);
+            fctx.stroke();
+            const act = 0.5 + 0.5 * Math.sin(t * 0.0008 + nd.ph);
+            fctx.font = '10px "JetBrains Mono", monospace';
+            fctx.fillStyle = 'rgba(' + col + ',1)';
+            fctx.fillText('NODE ' + nd.li + '-' + String(nd.i).padStart(2, '0'), bx + 10, by + 16);
+            fctx.fillStyle = 'rgba(247,247,244,0.85)';
+            fctx.fillText('layer  : ' + LAYER_NAMES[nd.li], bx + 10, by + 30);
+            fctx.fillText('act    : ' + act.toFixed(3), bx + 10, by + 43);
+            fctx.fillText('weight : ' + nd.w.toFixed(3), bx + 10, by + 56);
+          }
         }
-        /* hero text blends into the network and fades */
-        if (heroSection){
-          const tf = 1 - smooth(0.10, 0.48, p);
-          heroSection.style.opacity = tf;
-          heroSection.style.filter = tf < 1 ? 'blur(' + (1 - tf) * 7 + 'px)' : '';
-          heroSection.style.transform = 'translateY(' + (1 - tf) * -30 + 'px)';
-          heroSection.style.pointerEvents = tf < 0.4 ? 'none' : '';
-        }
-      } else if (heroSection){
-        heroSection.style.opacity = '';
-        heroSection.style.filter = '';
-        heroSection.style.transform = '';
-        heroSection.style.pointerEvents = '';
       }
 
       if (!reduced) requestAnimationFrame(frame);
@@ -916,39 +973,36 @@
     }
   })();
 
-  /* ---------- SMOOTH WHEEL SCROLLING ---------- */
+  /* ---------- SMOOTH SCROLLING (Lenis) + INTRO TIMELINE (GSAP) ---------- */
   (function(){
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const coarse = window.matchMedia('(pointer: coarse)').matches;
-    if (reduced || coarse) return;   /* native scrolling on touch / reduced motion */
 
-    let target = window.scrollY, current = window.scrollY, raf = null;
-
-    function max(){ return document.documentElement.scrollHeight - window.innerHeight; }
-
-    function loop(){
-      current += (target - current) * 0.11;
-      if (Math.abs(target - current) < 0.5){
-        current = target;
-        raf = null;
-      } else {
-        raf = requestAnimationFrame(loop);
-      }
-      window.scrollTo({ top: current, behavior: 'instant' });   /* bypass CSS smooth-behavior */
+    if (window.Lenis && !reduced && !coarse){
+      const lenis = new Lenis({ duration: 1.1 });
+      (function raf(time){ lenis.raf(time); requestAnimationFrame(raf); })(0);
+      /* route anchor clicks through Lenis */
+      document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+          const el = document.querySelector(a.getAttribute('href'));
+          if (el){ e.preventDefault(); lenis.scrollTo(el, { offset: -70 }); }
+        });
+      });
     }
 
-    window.addEventListener('wheel', e => {
-      if (e.ctrlKey) return;          /* keep pinch-zoom native */
-      e.preventDefault();
-      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1);
-      target = Math.max(0, Math.min(max(), target + dy));
-      if (!raf) raf = requestAnimationFrame(loop);
-    }, { passive: false });
-
-    /* keep in sync when scrolling via keyboard, anchors, or scrollbar */
-    window.addEventListener('scroll', () => {
-      if (raf === null){ target = window.scrollY; current = window.scrollY; }
-    });
+    if (window.gsap && window.ScrollTrigger && !reduced){
+      gsap.registerPlugin(ScrollTrigger);
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: '.intro-stage', start: 'top top', end: 'bottom bottom', scrub: 0.4 }
+      });
+      tl.to({}, { duration: 0.22 });                                /* hold name while noise gathers */
+      tl.to('.intro-name', { opacity: 0, scale: 0.92, filter: 'blur(10px)', ease: 'none', duration: 0.3 });
+      tl.to({}, { duration: 0.48 });                                /* formed DNN owns the viewport */
+      gsap.to('.scroll-hint', {
+        scrollTrigger: { trigger: '.intro-stage', start: 'top top', end: '12% top', scrub: true },
+        opacity: 0, ease: 'none'
+      });
+    }
   })();
 </script>
 </body>
