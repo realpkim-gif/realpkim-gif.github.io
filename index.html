@@ -152,8 +152,8 @@
 
   .hero{
     width:100%;
-    min-height:88vh;
-    padding:100px 0 80px;
+    min-height:70vh;
+    padding:48px 0 56px;
     display:grid;
     grid-template-columns:1.1fr 0.9fr;
     gap:56px;
@@ -290,7 +290,7 @@
     grid-template-columns:110px 1fr auto;
     gap:24px;
     align-items:start;
-    padding:36px 0;
+    padding:30px 0;
     border-bottom:1px solid var(--line);
     transition:padding-left 0.2s ease;
   }
@@ -663,6 +663,41 @@
     </div>
   </section>
 
+  <!-- HOBBIES -->
+  <section id="hobbies" class="reveal">
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <h2>Outside of code</h2>
+    </div>
+    <div class="thought-grid" style="grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));">
+      <div class="thought reveal-item">
+        <span class="t-num">01</span>
+        <h3>Cubing</h3>
+        <p>Strictly casual, never competitive — but I can solve six-plus different types of twisty puzzles. The About section's cube is not an accident.</p>
+      </div>
+      <div class="thought reveal-item">
+        <span class="t-num">02</span>
+        <h3>Golf</h3>
+        <p>A game that gives honest feedback on every swing and punishes overthinking. I keep coming back anyway.</p>
+      </div>
+      <div class="thought reveal-item">
+        <span class="t-num">03</span>
+        <h3>Math</h3>
+        <p>Puzzles and problem-solving for their own sake — the habit that pulled me toward machine learning in the first place.</p>
+      </div>
+      <div class="thought reveal-item">
+        <span class="t-num">04</span>
+        <h3>Tutoring &amp; service</h3>
+        <p>Mostly academic — tutoring students — and sometimes hands-on, like food bank shifts. Teaching is the throughline; I genuinely love explaining things.</p>
+      </div>
+      <div class="thought reveal-item">
+        <span class="t-num">05</span>
+        <h3>Lifting</h3>
+        <p>Consistency practice: show up, add a little weight, repeat. Gradient descent for the body.</p>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer id="contact">
@@ -751,7 +786,7 @@
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     LAYERS.forEach((n, li) => {
       for (let i = 0; i < n; i++){
-        net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, w: (rnd() - 0.5) * 2, x: 0, y: 0, pop: 1, dx: (rnd() - 0.5) * 2, dy: (rnd() - 0.5) * 2 });
+        net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, w: (rnd() - 0.5) * 2, x: 0, y: 0, hs: 0, pop: 1, dx: (rnd() - 0.5) * 2, dy: (rnd() - 0.5) * 2 });
       }
     });
     const smooth = (a, b, x) => {
@@ -987,7 +1022,7 @@
         const span = r.height - H;
         const p = span > 60 ? Math.max(0, Math.min(1, -r.top / span)) : 0;
         const form = smooth(0.04, 0.45, p);
-        const fadeOut = 1 - smooth(0.86, 0.99, p);
+        const fadeOut = 1 - smooth(0.92, 1, p);
         const cx = W / 2, cy = H / 2;
         const lw = Math.min(W * 0.78, 1080);
         const lh = Math.min(H * 0.68, 560);
@@ -1027,19 +1062,13 @@
             /* nodes swell smoothly as the cursor nears, with distance falloff */
             const dm = mouse.x > -999 ? Math.hypot(nd.x - mouse.x, nd.y - mouse.y) : 1e9;
             const tgt = form > 0.6 ? Math.max(0, 1 - dm / 95) : 0;
-            nd.hs = (nd.hs || 0) + (tgt - nd.hs) * 0.18;
-            const rad = (4.2 + 2.6 * form) * (1 + 1.6 * nd.hs);
+            nd.hs += (tgt - nd.hs) * 0.18;
+            const rad = (3.6 + 2.4 * form) * (1 + 0.9 * nd.hs);
             fctx.shadowColor = 'rgba(' + LAYER_COLS[nd.li] + ',0.9)';
-            fctx.shadowBlur = (8 + 26 * nd.hs) * form;
+            fctx.shadowBlur = (8 + 20 * nd.hs) * form;
             fctx.fillStyle = 'rgba(' + LAYER_COLS[nd.li] + ',' + Math.min(1, (0.88 + 0.12 * nd.hs) * fadeOut) + ')';
             fctx.beginPath();
             fctx.arc(nd.x, nd.y, rad, 0, Math.PI * 2);
-            fctx.fill();
-            /* light core so each node reads like a classic network diagram */
-            fctx.shadowBlur = 0;
-            fctx.fillStyle = 'rgba(247,247,244,' + 0.85 * form * fadeOut + ')';
-            fctx.beginPath();
-            fctx.arc(nd.x, nd.y, rad * 0.42, 0, Math.PI * 2);
             fctx.fill();
           }
           fctx.restore();
@@ -1048,6 +1077,12 @@
         if (hovered){
           const nd = hovered.nd;
           const col = LAYER_COLS[nd.li];
+          /* growing ring around the hovered node, sized like the old cursor ring */
+          fctx.strokeStyle = 'rgba(' + col + ',0.8)';
+          fctx.lineWidth = 1.5;
+          fctx.beginPath();
+          fctx.arc(nd.x, nd.y, 17 + 10 * nd.hs, 0, Math.PI * 2);
+          fctx.stroke();
           const bw = 168, bh = 66;
           let bx = nd.x + 20, by = nd.y - bh - 14;
           if (bx + bw > W - 12) bx = nd.x - bw - 20;
