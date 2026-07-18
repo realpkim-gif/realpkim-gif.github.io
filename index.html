@@ -121,7 +121,7 @@
 
   /* ---------- HERO ---------- */
   /* ---------- INTRO (name + DNN scrollytelling) ---------- */
-  .intro-stage{ height:300vh; }
+  .intro-stage{ height:200vh; }
   .intro-pin{
     position:sticky; top:0; height:100vh;
     display:flex; align-items:center; justify-content:center;
@@ -747,7 +747,7 @@
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     LAYERS.forEach((n, li) => {
       for (let i = 0; i < n; i++){
-        net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, w: (rnd() - 0.5) * 2, x: 0, y: 0 });
+        net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, w: (rnd() - 0.5) * 2, x: 0, y: 0, pop: 1, dx: (rnd() - 0.5) * 2, dy: (rnd() - 0.5) * 2 });
       }
     });
     const smooth = (a, b, x) => {
@@ -758,36 +758,57 @@
     window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 
     /* wireframe shapes */
-    function icosa(){
-      const p = (1 + Math.sqrt(5)) / 2, v = [];
-      [[0,1,p],[0,1,-p],[0,-1,p],[0,-1,-p],[1,p,0],[1,-p,0],[-1,p,0],[-1,-p,0],[p,0,1],[-p,0,1],[p,0,-1],[-p,0,-1]]
-        .forEach(a => v.push(a));
-      const e = [];
-      let min = Infinity;
-      for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++){
-        const d = Math.hypot(v[i][0]-v[j][0], v[i][1]-v[j][1], v[i][2]-v[j][2]);
-        if (d < min) min = d;
-      }
-      for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++){
-        const d = Math.hypot(v[i][0]-v[j][0], v[i][1]-v[j][1], v[i][2]-v[j][2]);
-        if (d < min * 1.05) e.push([i, j]);
-      }
-      const s = 0.62;
-      return { v: v.map(a => a.map(c => c * s)), e };
+    function tetra(){
+      const s = 0.85;
+      const v = [[s,s,s],[s,-s,-s],[-s,s,-s],[-s,-s,s]];
+      const e = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+      return { v, e };
     }
-    function chip(){
-      const w = 1.15, h = 0.14, d = 1.15, v = [], e = [];
-      [[-w,-h,-d],[w,-h,-d],[w,-h,d],[-w,-h,d],[-w,h,-d],[w,h,-d],[w,h,d],[-w,h,d]].forEach(a => v.push(a));
-      e.push([0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]);
-      for (let i = 0; i < 4; i++){
-        const z = -0.78 + i * 0.52;
-        [[w, z, 1], [-w, z, -1]].forEach(([sx, sz, dir]) => {
-          v.push([sx, 0, z], [sx + 0.42 * dir, 0, z]);
-          e.push([v.length - 2, v.length - 1]);
-        });
-        v.push([z, 0, d], [z, 0, d + 0.42]); e.push([v.length - 2, v.length - 1]);
-        v.push([z, 0, -d], [z, 0, -d - 0.42]); e.push([v.length - 2, v.length - 1]);
+    /* 3x3x3 rubik cube with periodic layer twists */
+    function makeRubik(){
+      const cubelets = [], h = 0.24, sp = 0.55;
+      for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++){
+        const verts = [];
+        [[-h,-h,-h],[h,-h,-h],[h,h,-h],[-h,h,-h],[-h,-h,h],[h,-h,h],[h,h,h],[-h,h,h]]
+          .forEach(o => verts.push([x*sp + o[0], y*sp + o[1], z*sp + o[2]]));
+        cubelets.push({ idx: [x, y, z], verts });
       }
+      return { cubelets, move: null, nextAt: 800 };
+    }
+    function rotAxis(p, axis, ang){
+      const [x, y, z] = p, c = Math.cos(ang), s = Math.sin(ang);
+      if (axis === 0) return [x, y*c - z*s, y*s + z*c];
+      if (axis === 1) return [x*c + z*s, y, -x*s + z*c];
+      return [x*c - y*s, x*s + y*c, z];
+    }
+    function rubikGeom(st, t){
+      if (!st.move && t >= st.nextAt){
+        st.move = { axis: Math.floor(rnd() * 3), layer: Math.floor(rnd() * 3) - 1, dir: rnd() < 0.5 ? 1 : -1, start: t, dur: 2400 };
+      }
+      let ang = 0, mv = st.move;
+      if (mv){
+        const k = Math.min(1, (t - mv.start) / mv.dur);
+        ang = k * k * (3 - 2 * k) * Math.PI / 2 * mv.dir;
+        if (k >= 1){
+          const full = Math.PI / 2 * mv.dir;
+          st.cubelets.forEach(cb => {
+            if (cb.idx[mv.axis] === mv.layer){
+              cb.verts = cb.verts.map(q => rotAxis(q, mv.axis, full));
+              cb.idx = rotAxis(cb.idx, mv.axis, full).map(Math.round);
+            }
+          });
+          st.move = null; st.nextAt = t + 1400; mv = null; ang = 0;
+        }
+      }
+      const v = [], e = [];
+      st.cubelets.forEach(cb => {
+        const twisting = mv && cb.idx[mv.axis] === mv.layer;
+        const base = v.length;
+        cb.verts.forEach(q => v.push(twisting ? rotAxis(q, mv.axis, ang) : q));
+        e.push([base,base+1],[base+1,base+2],[base+2,base+3],[base+3,base],
+               [base+4,base+5],[base+5,base+6],[base+6,base+7],[base+7,base+4],
+               [base,base+4],[base+1,base+5],[base+2,base+6],[base+3,base+7]);
+      });
       return { v, e };
     }
     function wave(){
@@ -815,10 +836,10 @@
       return { v, e };
     }
     const sceneDefs = [
-      { sel: '#about',    shape: icosa(), side: 1,  spin: 0.00022, col: '52,80,224' },
-      { sel: '#work',     shape: chip(),  side: -1, spin: 0.00018, col: '14,154,108' },
-      { sel: '#skills',   shape: wave(),  side: 1,  spin: 0.00008, wave: true, col: '123,63,228' },
-      { sel: '#thoughts', shape: cubes(), side: -1, spin: 0.0002,  col: '219,39,119' }
+      { sel: '#about',    rubik: makeRubik(), side: 1,  spin: 0.00014, col: '52,80,224' },
+      { sel: '#work',     shape: tetra(),     side: -1, spin: 0.00026, col: '14,154,108' },
+      { sel: '#skills',   shape: wave(),      side: 1,  spin: 0.00008, wave: true, col: '123,63,228' },
+      { sel: '#thoughts', shape: cubes(),     side: -1, spin: 0.0002,  col: '219,39,119' }
     ].map(s => ({ ...s, el: document.querySelector(s.sel) })).filter(s => s.el);
 
     function drawShape(def, t){
@@ -839,25 +860,61 @@
       const rx = def.wave ? 0.95 : 0.42 + Math.sin(t * 0.00012) * 0.1;
       const cosY = Math.cos(ry), sinY = Math.sin(ry);
       const cosX = Math.cos(rx), sinX = Math.sin(rx);
-      const pts = def.shape.v.map(([x, y, z]) => {
-        if (def.wave){
-          y = 0.34 * Math.sin(x * 2.6 + t * 0.0016) * Math.cos(z * 2.6 + t * 0.0011);
-        }
+      const proj = (x, y, z) => {
         let px = x * cosY + z * sinY, pz = -x * sinY + z * cosY;
         let py = y * cosX - pz * sinX; pz = y * sinX + pz * cosX;
         const f = 3.4 / (3.4 + pz);
         return [cx + px * scale * f, cy + py * scale * f];
-      });
+      };
+      /* convex loss surface: bowl z = f(x,y) with a gentle ripple */
+      const surf = (x, z) => 0.30 - 0.42 * (x * x + z * z)
+        + 0.05 * Math.sin(x * 3 + t * 0.0012) * Math.cos(z * 3 + t * 0.0009);
+      const geom = def.rubik ? rubikGeom(def.rubik, t) : def.shape;
+      const pts = geom.v.map(([x, y, z]) => proj(x, def.wave ? surf(x, z) : y, z));
       ctx.strokeStyle = 'rgba(' + def.col + ',' + op + ')';
       ctx.lineWidth = 1.25;
       ctx.beginPath();
-      def.shape.e.forEach(([a, b]) => {
+      geom.e.forEach(([a, b]) => {
         ctx.moveTo(pts[a][0], pts[a][1]);
         ctx.lineTo(pts[b][0], pts[b][1]);
       });
       ctx.stroke();
       ctx.fillStyle = 'rgba(' + def.col + ',' + Math.min(op * 1.6, 0.55) + ')';
       pts.forEach(p => { ctx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
+
+      /* gradient descent on the bowl: a ball slides to the minimum, leaving a trail */
+      if (def.wave){
+        if (!def.ball) def.ball = { x: 0.92, z: 0.30, trail: [], wait: 0, a: 0.32 };
+        const B = def.ball;
+        if (B.wait > 0){
+          B.wait--;
+          if (B.wait === 0){
+            B.a += 2.3;
+            B.x = Math.cos(B.a) * 0.92;
+            B.z = Math.sin(B.a) * 0.92;
+            B.trail = [];
+          }
+        } else {
+          B.x *= 0.972; B.z *= 0.972;          /* GD step on the convex quadratic */
+          B.trail.push([B.x, B.z]);
+          if (B.trail.length > 48) B.trail.shift();
+          if (B.x * B.x + B.z * B.z < 0.0035) B.wait = 80;
+        }
+        B.trail.forEach(([tx, tz], i) => {
+          const tp = proj(tx, surf(tx, tz) - 0.05, tz);
+          ctx.fillStyle = 'rgba(' + def.col + ',' + (op * 1.5 * (i / B.trail.length)) + ')';
+          ctx.fillRect(tp[0] - 1, tp[1] - 1, 2, 2);
+        });
+        const bp = proj(B.x, surf(B.x, B.z) - 0.07, B.z);
+        ctx.save();
+        ctx.shadowColor = 'rgba(' + def.col + ',0.8)';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = 'rgba(' + def.col + ',' + Math.min(op * 2.4, 0.7) + ')';
+        ctx.beginPath();
+        ctx.arc(bp[0], bp[1], 3.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     function frame(t){
@@ -885,81 +942,82 @@
         const span = r.height - H;
         const p = span > 60 ? Math.max(0, Math.min(1, -r.top / span)) : 0;
         const form = smooth(0.04, 0.45, p);
-        const fadeOut = 1 - smooth(0.86, 0.99, p);
-        if (r.bottom > 0 && fadeOut > 0.02){
-          const cx = W / 2, cy = H / 2;
-          const lw = Math.min(W * 0.78, 1080);
-          const lh = Math.min(H * 0.68, 560);
-          for (const nd of net){
-            const tx = cx + (nd.li / (LAYERS.length - 1) - 0.5) * lw;
-            const ty = cy + (nd.i - (nd.n - 1) / 2) * (lh / MAXROW);
-            const wob = Math.sin(t * 0.0011 + nd.ph) * 6 * form;
-            const mx = (mouse.x > -999 ? (mouse.x - cx) * 0.05 : 0) * form;
-            const my = (mouse.y > -999 ? (mouse.y - cy) * 0.05 : 0) * form;
-            nd.x = nd.nx * W + (tx - nd.nx * W) * form + mx;
-            nd.y = nd.ny * H + (ty - nd.ny * H) * form + my + wob;
-          }
-          /* edges, colored by source layer */
-          if (form > 0.03){
-            fctx.lineWidth = 1;
-            for (let li = 0; li < LAYERS.length - 1; li++){
-              fctx.strokeStyle = 'rgba(' + LAYER_COLS[li] + ',' + 0.22 * form * fadeOut + ')';
-              fctx.beginPath();
-              for (const a of net) for (const b of net){
-                if (a.li === li && b.li === li + 1){ fctx.moveTo(a.x, a.y); fctx.lineTo(b.x, b.y); }
-              }
-              fctx.stroke();
+        const dissolve = smooth(0.72, 0.97, p);
+        const formation = form * (1 - dissolve);
+        const cx = W / 2, cy = H / 2;
+        const lw = Math.min(W * 0.78, 1080);
+        const lh = Math.min(H * 0.68, 560);
+        for (const nd of net){
+          const tx = cx + (nd.li / (LAYERS.length - 1) - 0.5) * lw;
+          const ty = cy + (nd.i - (nd.n - 1) / 2) * (lh / MAXROW);
+          const wob = Math.sin(t * 0.0011 + nd.ph) * 6 * (0.3 + 0.7 * formation);
+          const mx = (mouse.x > -999 ? (mouse.x - cx) * 0.05 : 0) * formation;
+          const my = (mouse.y > -999 ? (mouse.y - cy) * 0.05 : 0) * formation;
+          nd.x = nd.nx * W + (tx - nd.nx * W) * formation + mx;
+          nd.y = nd.ny * H + (ty - nd.ny * H) * formation + my + wob;
+        }
+        /* edges dissipate as the network dissolves back into noise */
+        if (formation > 0.03){
+          fctx.lineWidth = 1;
+          for (let li = 0; li < LAYERS.length - 1; li++){
+            fctx.strokeStyle = 'rgba(' + LAYER_COLS[li] + ',' + 0.22 * formation + ')';
+            fctx.beginPath();
+            for (const a of net) for (const b of net){
+              if (a.li === li && b.li === li + 1){ fctx.moveTo(a.x, a.y); fctx.lineTo(b.x, b.y); }
             }
-          }
-          /* nodes, colored by layer */
-          const hovered = (form > 0.7 && mouse.x > -999)
-            ? net.reduce((best, nd) => {
-                const d = Math.hypot(nd.x - mouse.x, nd.y - mouse.y);
-                return d < 30 && (!best || d < best.d) ? { nd, d } : best;
-              }, null)
-            : null;
-          fctx.save();
-          for (const nd of net){
-            const hot = hovered && hovered.nd === nd;
-            fctx.shadowColor = 'rgba(' + LAYER_COLS[nd.li] + ',0.8)';
-            fctx.shadowBlur = (hot ? 18 : 10) * form;
-            fctx.fillStyle = 'rgba(' + LAYER_COLS[nd.li] + ',' + (0.4 + 0.5 * form) * fadeOut + ')';
-            fctx.beginPath();
-            fctx.arc(nd.x, nd.y, (2 + 1.8 * form) * (hot ? 1.9 : 1), 0, Math.PI * 2);
-            fctx.fill();
-          }
-          fctx.restore();
-          /* futuristic HUD readout on hover */
-          if (hovered){
-            const nd = hovered.nd;
-            const col = LAYER_COLS[nd.li];
-            const bw = 168, bh = 66;
-            let bx = nd.x + 20, by = nd.y - bh - 14;
-            if (bx + bw > W - 12) bx = nd.x - bw - 20;
-            if (by < 12) by = nd.y + 18;
-            fctx.strokeStyle = 'rgba(' + col + ',0.85)';
-            fctx.lineWidth = 1;
-            fctx.beginPath();
-            fctx.moveTo(nd.x, nd.y);
-            fctx.lineTo(bx + (bx > nd.x ? 0 : bw), by + bh);
             fctx.stroke();
-            fctx.fillStyle = 'rgba(20,23,26,0.88)';
-            fctx.fillRect(bx, by, bw, bh);
-            fctx.strokeRect(bx, by, bw, bh);
-            /* corner ticks */
-            fctx.beginPath();
-            fctx.moveTo(bx - 4, by + 8); fctx.lineTo(bx - 4, by - 4); fctx.lineTo(bx + 8, by - 4);
-            fctx.moveTo(bx + bw + 4, by + bh - 8); fctx.lineTo(bx + bw + 4, by + bh + 4); fctx.lineTo(bx + bw - 8, by + bh + 4);
-            fctx.stroke();
-            const act = 0.5 + 0.5 * Math.sin(t * 0.0008 + nd.ph);
-            fctx.font = '10px "JetBrains Mono", monospace';
-            fctx.fillStyle = 'rgba(' + col + ',1)';
-            fctx.fillText('NODE ' + nd.li + '-' + String(nd.i).padStart(2, '0'), bx + 10, by + 16);
-            fctx.fillStyle = 'rgba(247,247,244,0.85)';
-            fctx.fillText('layer  : ' + LAYER_NAMES[nd.li], bx + 10, by + 30);
-            fctx.fillText('act    : ' + act.toFixed(3), bx + 10, by + 43);
-            fctx.fillText('weight : ' + nd.w.toFixed(3), bx + 10, by + 56);
           }
+        }
+        /* nodes: smooth hover pop; after dissolving they persist as ambient dust */
+        const hovered = (formation > 0.7 && mouse.x > -999)
+          ? net.reduce((best, nd) => {
+              const d = Math.hypot(nd.x - mouse.x, nd.y - mouse.y);
+              return d < 34 && (!best || d < best.d) ? { nd, d } : best;
+            }, null)
+          : null;
+        fctx.save();
+        for (const nd of net){
+          const hot = hovered && hovered.nd === nd;
+          nd.hs = (nd.hs || 0) + ((hot ? 1 : 0) - nd.hs) * 0.16;
+          const alpha = (0.4 + 0.5 * form) * (1 - dissolve) + 0.16 * dissolve;
+          fctx.shadowColor = 'rgba(' + LAYER_COLS[nd.li] + ',0.8)';
+          fctx.shadowBlur = (10 + 18 * nd.hs) * formation;
+          fctx.fillStyle = 'rgba(' + LAYER_COLS[nd.li] + ',' + alpha + ')';
+          fctx.beginPath();
+          fctx.arc(nd.x, nd.y, (1.6 + 2.2 * formation) * (1 + 1.5 * nd.hs), 0, Math.PI * 2);
+          fctx.fill();
+        }
+        fctx.restore();
+        /* futuristic HUD readout on hover */
+        if (hovered){
+          const nd = hovered.nd;
+          const col = LAYER_COLS[nd.li];
+          const bw = 168, bh = 66;
+          let bx = nd.x + 20, by = nd.y - bh - 14;
+          if (bx + bw > W - 12) bx = nd.x - bw - 20;
+          if (by < 12) by = nd.y + 18;
+          fctx.strokeStyle = 'rgba(' + col + ',0.85)';
+          fctx.lineWidth = 1;
+          fctx.beginPath();
+          fctx.moveTo(nd.x, nd.y);
+          fctx.lineTo(bx + (bx > nd.x ? 0 : bw), by + bh);
+          fctx.stroke();
+          fctx.fillStyle = 'rgba(20,23,26,0.88)';
+          fctx.fillRect(bx, by, bw, bh);
+          fctx.strokeRect(bx, by, bw, bh);
+          /* corner ticks */
+          fctx.beginPath();
+          fctx.moveTo(bx - 4, by + 8); fctx.lineTo(bx - 4, by - 4); fctx.lineTo(bx + 8, by - 4);
+          fctx.moveTo(bx + bw + 4, by + bh - 8); fctx.lineTo(bx + bw + 4, by + bh + 4); fctx.lineTo(bx + bw - 8, by + bh + 4);
+          fctx.stroke();
+          const act = 0.5 + 0.5 * Math.sin(t * 0.0008 + nd.ph);
+          fctx.font = '10px "JetBrains Mono", monospace';
+          fctx.fillStyle = 'rgba(' + col + ',1)';
+          fctx.fillText('NODE ' + nd.li + '-' + String(nd.i).padStart(2, '0'), bx + 10, by + 16);
+          fctx.fillStyle = 'rgba(247,247,244,0.85)';
+          fctx.fillText('layer  : ' + LAYER_NAMES[nd.li], bx + 10, by + 30);
+          fctx.fillText('act    : ' + act.toFixed(3), bx + 10, by + 43);
+          fctx.fillText('weight : ' + nd.w.toFixed(3), bx + 10, by + 56);
         }
       }
 
