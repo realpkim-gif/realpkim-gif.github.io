@@ -954,24 +954,8 @@
       { sel: '#hobbies',  rubik: makeRubik(), side: 1,  spin: 0.00014, col: '52,80,224', label: "RUBIK'S CUBE" }
     ].map(s => ({ ...s, el: document.querySelector(s.sel) })).filter(s => s.el);
 
-    /* screen-space trackball: drag rotates the shape about the SCREEN's axes,
-       applied on top of the base tilt/spin, so "right" always means right to the
-       viewer regardless of how the shape is currently turned (no back-control). */
-    const matI = () => [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    const matMul = (A, B) => {
-      const R = new Array(9);
-      for (let r2 = 0; r2 < 3; r2++) for (let c2 = 0; c2 < 3; c2++)
-        R[r2 * 3 + c2] = A[r2 * 3] * B[c2] + A[r2 * 3 + 1] * B[3 + c2] + A[r2 * 3 + 2] * B[6 + c2];
-      return R;
-    };
-    const rotYm = a => [Math.cos(a), 0, Math.sin(a), 0, 1, 0, -Math.sin(a), 0, Math.cos(a)];
-    const rotXm = a => [1, 0, 0, 0, Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a)];
-    const matApply = (M, x, y, z) => [
-      M[0] * x + M[1] * y + M[2] * z,
-      M[3] * x + M[4] * y + M[5] * z,
-      M[6] * x + M[7] * y + M[8] * z
-    ];
-
+    /* hold-and-drag: stable yaw (about vertical) + pitch (about horizontal) offsets,
+       no roll — the shape's axes never drift. */
     let dragDef = null, dragX = 0, dragY = 0;
     window.addEventListener('mousedown', e => {
       for (const def of sceneDefs){
@@ -984,12 +968,8 @@
     });
     window.addEventListener('mousemove', e => {
       if (!dragDef) return;
-      const dx = e.clientX - dragX, dy = e.clientY - dragY;
-      /* flat top-down shapes (the bowl) read near-edge at the top, so flip their yaw */
-      const s = dragDef.wave ? -1 : 1;
-      let M = matMul(rotYm(dx * 0.007 * s), dragDef.M || matI());   /* rotate about screen vertical */
-      M = matMul(rotXm(-dy * 0.007), M);                            /* rotate about screen horizontal */
-      dragDef.M = M;
+      dragDef.yaw = (dragDef.yaw || 0) + (e.clientX - dragX) * 0.007;
+      dragDef.pitch = Math.max(-0.9, Math.min(0.9, (dragDef.pitch || 0) - (e.clientY - dragY) * 0.007));
       dragX = e.clientX; dragY = e.clientY;
     });
     window.addEventListener('mouseup', () => { dragDef = null; document.body.style.userSelect = ''; });
@@ -1014,14 +994,13 @@
       if (def._lt === undefined) def._lt = t;
       const dt = Math.min(t - def._lt, 60); def._lt = t;
       if (dragDef !== def) def.baseYaw = (def.baseYaw || 0) + def.spin * dt;
-      const ry = (def.baseYaw || 0) + window.scrollY * (def.wave ? 0.0004 : 0.0013);
-      const rx = def.wave ? 0.95 : 0.42 + Math.sin(t * 0.00012) * 0.1;
+      const ry = (def.baseYaw || 0) + window.scrollY * (def.wave ? 0.0004 : 0.0013) + (def.yaw || 0);
+      const rx = (def.wave ? 0.95 : 0.42 + Math.sin(t * 0.00012) * 0.1) + (def.pitch || 0);
       const cosY = Math.cos(ry), sinY = Math.sin(ry);
       const cosX = Math.cos(rx), sinX = Math.sin(rx);
       const proj = (x, y, z) => {
-        let px = x * cosY + z * sinY, pz = -x * sinY + z * cosY;   /* base spin */
-        let py = y * cosX - pz * sinX; pz = y * sinX + pz * cosX;  /* base tilt */
-        if (def.M){ const q = matApply(def.M, px, py, pz); px = q[0]; py = q[1]; pz = q[2]; }  /* screen-space drag */
+        let px = x * cosY + z * sinY, pz = -x * sinY + z * cosY;   /* yaw about vertical */
+        let py = y * cosX - pz * sinX; pz = y * sinX + pz * cosX;  /* pitch about horizontal — no roll */
         const f = 3.4 / (3.4 + pz);
         return [cx + px * scale * f, cy + py * scale * f, pz];
       };
@@ -1335,35 +1314,21 @@
         opacity: 0, ease: 'none'
       });
 
-      /* section headings decrypt: glyphs resolve to text, left to right */
-      const GLYPHS = '01∆◊≠∴λΣπ#</>+ΞΨ𓂀𓆣𓃰';
+      /* section headings: simple character blend-in, replays whenever it enters view */
       document.querySelectorAll('.section-head h2').forEach(h => {
-        const finals = h.textContent.split('');
+        const chars = h.textContent.split('');
         h.textContent = '';
-        finals.forEach(c => {
+        chars.forEach(c => {
           const s = document.createElement('span');
           s.className = 'ch';
           s.textContent = c;
           h.appendChild(s);
         });
         const spans = h.querySelectorAll('.ch');
-        spans.forEach((s, i) => { if (finals[i] !== ' ') s.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)]; });  /* start scrambled, no real-text flash */
-        let iv = null;
-        const decrypt = () => {                          /* replays every time it enters view */
-          if (iv) clearInterval(iv);
-          spans.forEach((s, i) => { if (finals[i] !== ' ') s.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)]; });
-          gsap.fromTo(spans, { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.3, ease: 'power2.out', stagger: 0.015 });
-          let f = 0;
-          iv = setInterval(() => {
-            f++;
-            spans.forEach((s, i) => {
-              if (f > i * 1.1 + 4) s.textContent = finals[i];
-              else if (finals[i] !== ' ') s.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-            });
-            if (f > finals.length * 1.1 + 5){ clearInterval(iv); iv = null; }
-          }, 22);
-        };
-        ScrollTrigger.create({ trigger: h, start: 'top 88%', onEnter: decrypt, onEnterBack: decrypt });
+        const blend = () => gsap.fromTo(spans,
+          { opacity: 0, yPercent: 40, filter: 'blur(6px)' },
+          { opacity: 1, yPercent: 0, filter: 'blur(0px)', duration: 0.55, ease: 'power2.out', stagger: 0.03, overwrite: true });
+        ScrollTrigger.create({ trigger: h, start: 'top 92%', onEnter: blend, onEnterBack: blend });
       });
 
       /* gentle parallax on the hero card */
