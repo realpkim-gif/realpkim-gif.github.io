@@ -813,10 +813,10 @@
       }
       return { v, e };
     }
-    /* lightbulb: glass envelope + screw base + inner filament (y+ is down) */
+    /* lightbulb: round A-series glass + screw base + glowing capital-P filament (y+ down) */
     function lightbulb(){
       const v = [], e = [];
-      const SEG = 16, step = 2;
+      const SEG = 18, step = 3;
       const ring = (y, r) => {
         const b = v.length;
         for (let i = 0; i < SEG; i++){
@@ -826,26 +826,27 @@
         for (let i = 0; i < SEG; i++) e.push([b + i, b + (i + 1) % SEG]);
         return b;
       };
-      /* glass profile: [y, radius] from crown down to neck */
-      const prof = [[-0.92, 0.12], [-0.74, 0.4], [-0.54, 0.56], [-0.32, 0.57], [-0.12, 0.45], [0.04, 0.27]];
+      /* rounded glass profile: near-spherical bulb necking into the base */
+      const prof = [[-1.0, 0.06], [-0.9, 0.28], [-0.78, 0.46], [-0.62, 0.58],
+                    [-0.44, 0.63], [-0.26, 0.61], [-0.08, 0.5], [0.06, 0.34], [0.16, 0.24]];
       const gr = prof.map(([y, r]) => ring(y, r));
       for (let k = 1; k < gr.length; k++){                 /* longitude ties */
         for (let i = 0; i < SEG; i += step) e.push([gr[k - 1] + i, gr[k] + i]);
       }
-      const top = v.length; v.push([0, -1.0, 0]);          /* crown cap */
+      const top = v.length; v.push([0, -1.07, 0]);         /* crown cap */
       for (let i = 0; i < SEG; i += step) e.push([top, gr[0] + i]);
       const glassCount = v.length;                          /* glass = everything so far */
       /* screw base: stacked thread rings */
-      const b1 = ring(0.08, 0.24), b2 = ring(0.18, 0.23), b3 = ring(0.28, 0.21), b4 = ring(0.37, 0.15);
+      const b1 = ring(0.2, 0.24), b2 = ring(0.3, 0.23), b3 = ring(0.4, 0.21), b4 = ring(0.49, 0.15);
       [[b1, b2], [b2, b3], [b3, b4]].forEach(([a, b]) => { for (let i = 0; i < SEG; i += step) e.push([a + i, b + i]); });
-      const tip = v.length; v.push([0, 0.47, 0]);           /* contact tip */
-      for (let i = 0; i < SEG; i += 4) e.push([tip, b4 + i]);
-      /* filament: zigzag suspended mid-glass */
+      const tip = v.length; v.push([0, 0.58, 0]);           /* contact tip */
+      for (let i = 0; i < SEG; i += 5) e.push([tip, b4 + i]);
+      /* filament shaped as a capital P (stem + top bowl), suspended in the glass */
       const fs = v.length;
-      [[-0.13, -0.12, 0], [-0.13, -0.44, 0], [-0.065, -0.32, 0], [0, -0.46, 0], [0.065, -0.32, 0], [0.13, -0.44, 0], [0.13, -0.12, 0]]
+      [[-0.17, 0.14, 0], [-0.17, -0.58, 0], [0.16, -0.58, 0], [0.16, -0.2, 0], [-0.17, -0.2, 0]]
         .forEach(p => v.push(p));
-      for (let i = 0; i < 6; i++) e.push([fs + i, fs + i + 1]);
-      return { v, e, glassCount, filament: fs, filN: 7 };
+      for (let i = 0; i < 4; i++) e.push([fs + i, fs + i + 1]);
+      return { v, e, glassCount, filament: fs, filN: 5 };
     }
     /* floating mini desk: laptop, coffee, notebook, pencil (y+ is down) */
     function workspace(){
@@ -969,7 +970,8 @@
     window.addEventListener('mousemove', e => {
       if (!dragDef) return;
       dragDef.yaw = (dragDef.yaw || 0) + (e.clientX - dragX) * 0.007;    /* right -> +ry -> front turns right */
-      dragDef.pitch = (dragDef.pitch || 0) - (e.clientY - dragY) * 0.007; /* down -> -rx -> front tilts down */
+      /* clamp tilt so it never flips over the pole (the source of "inverted" feel) */
+      dragDef.pitch = Math.max(-0.9, Math.min(0.9, (dragDef.pitch || 0) - (e.clientY - dragY) * 0.007));
       dragX = e.clientX; dragY = e.clientY;
     });
     window.addEventListener('mouseup', () => { dragDef = null; document.body.style.userSelect = ''; });
@@ -990,7 +992,11 @@
       if (def.float) cy += Math.sin(t * 0.0012) * 8;     /* gentle floating bob */
       const scale = Math.min(margin * 0.72, Math.min(W, H) * 0.17) * (0.75 + vis * 0.25) * (def.mag || 1);
       def._cx = cx; def._cy = cy; def._r = scale * 1.5;   /* hit area for drag-rotation */
-      const ry = t * def.spin + window.scrollY * (def.wave ? 0.0004 : 0.0013) + (def.yaw || 0);
+      /* accumulate spin so it can pause while the shape is held (no fighting the drag) */
+      if (def._lt === undefined) def._lt = t;
+      const dt = Math.min(t - def._lt, 60); def._lt = t;
+      if (dragDef !== def) def.baseYaw = (def.baseYaw || 0) + def.spin * dt;
+      const ry = (def.baseYaw || 0) + window.scrollY * (def.wave ? 0.0004 : 0.0013) + (def.yaw || 0);
       const rx = (def.wave ? 0.95 : 0.42 + Math.sin(t * 0.00012) * 0.1) + (def.pitch || 0);
       const cosY = Math.cos(ry), sinY = Math.sin(ry);
       const cosX = Math.cos(rx), sinX = Math.sin(rx);
@@ -1322,9 +1328,11 @@
           h.appendChild(s);
         });
         const spans = h.querySelectorAll('.ch');
+        spans.forEach((s, i) => { if (finals[i] !== ' ') s.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)]; });  /* start scrambled, no real-text flash */
         let iv = null;
         const decrypt = () => {                          /* replays every time it enters view */
           if (iv) clearInterval(iv);
+          spans.forEach((s, i) => { if (finals[i] !== ' ') s.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)]; });
           gsap.fromTo(spans, { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.3, ease: 'power2.out', stagger: 0.015 });
           let f = 0;
           iv = setInterval(() => {
