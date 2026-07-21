@@ -813,36 +813,39 @@
       }
       return { v, e };
     }
-    /* brain: stacked wrinkled contour slices + cerebellum + stem (y+ is down) */
-    function brain(){
+    /* lightbulb: glass envelope + screw base + inner filament (y+ is down) */
+    function lightbulb(){
       const v = [], e = [];
-      const ring = (cx2, cy2, rx2, rz2, n, wob, ph) => {
+      const SEG = 16, step = 2;
+      const ring = (y, r) => {
         const b = v.length;
-        for (let i = 0; i < n; i++){
-          const a = i / n * Math.PI * 2;
-          const w = 1 + wob * Math.sin(a * 5 + ph);
-          v.push([cx2 + Math.cos(a) * rx2 * w, cy2, Math.sin(a) * rz2 * w]);
+        for (let i = 0; i < SEG; i++){
+          const a = i / SEG * Math.PI * 2;
+          v.push([Math.cos(a) * r, y, Math.sin(a) * r]);
         }
-        for (let i = 0; i < n; i++) e.push([b + i, b + (i + 1) % n]);
+        for (let i = 0; i < SEG; i++) e.push([b + i, b + (i + 1) % SEG]);
         return b;
       };
-      /* cortex profile: [y, radius] from crown down to base */
-      const prof = [[-0.78, 0.34], [-0.62, 0.6], [-0.42, 0.8], [-0.18, 0.93], [0.06, 1.0], [0.26, 0.94], [0.42, 0.76]];
-      const rows = prof.map(([y, r], k) =>
-        ring(0.12 - y * 0.1, y, r * 1.18, r * 0.8, 16, 0.075, k * 1.7)
-      );
-      for (let k = 1; k < rows.length; k++){          /* vertical mesh ties */
-        for (let i = 0; i < 16; i += 4) e.push([rows[k - 1] + i, rows[k] + i]);
+      /* glass profile: [y, radius] from crown down to neck */
+      const prof = [[-0.92, 0.12], [-0.74, 0.4], [-0.54, 0.56], [-0.32, 0.57], [-0.12, 0.45], [0.04, 0.27]];
+      const gr = prof.map(([y, r]) => ring(y, r));
+      for (let k = 1; k < gr.length; k++){                 /* longitude ties */
+        for (let i = 0; i < SEG; i += step) e.push([gr[k - 1] + i, gr[k] + i]);
       }
-      /* cerebellum: small rings at the rear-bottom */
-      ring(-0.58, 0.46, 0.32, 0.4, 10, 0.12, 0.5);
-      ring(-0.56, 0.58, 0.24, 0.3, 10, 0.12, 2.1);
-      ring(-0.52, 0.68, 0.15, 0.18, 8, 0.1, 3.4);
-      /* brainstem */
-      const st = v.length;
-      v.push([-0.26, 0.5, 0], [-0.36, 0.72, 0], [-0.44, 0.92, 0]);
-      e.push([st, st + 1], [st + 1, st + 2]);
-      return { v, e };
+      const top = v.length; v.push([0, -1.0, 0]);          /* crown cap */
+      for (let i = 0; i < SEG; i += step) e.push([top, gr[0] + i]);
+      const glassCount = v.length;                          /* glass = everything so far */
+      /* screw base: stacked thread rings */
+      const b1 = ring(0.08, 0.24), b2 = ring(0.18, 0.23), b3 = ring(0.28, 0.21), b4 = ring(0.37, 0.15);
+      [[b1, b2], [b2, b3], [b3, b4]].forEach(([a, b]) => { for (let i = 0; i < SEG; i += step) e.push([a + i, b + i]); });
+      const tip = v.length; v.push([0, 0.47, 0]);           /* contact tip */
+      for (let i = 0; i < SEG; i += 4) e.push([tip, b4 + i]);
+      /* filament: zigzag suspended mid-glass */
+      const fs = v.length;
+      [[-0.13, -0.12, 0], [-0.13, -0.44, 0], [-0.065, -0.32, 0], [0, -0.46, 0], [0.065, -0.32, 0], [0.13, -0.44, 0], [0.13, -0.12, 0]]
+        .forEach(p => v.push(p));
+      for (let i = 0; i < 6; i++) e.push([fs + i, fs + i + 1]);
+      return { v, e, glassCount, filament: fs, filN: 7 };
     }
     /* floating mini desk: laptop, coffee, notebook, pencil (y+ is down) */
     function workspace(){
@@ -856,10 +859,10 @@
       };
       const seg = (a, b2) => { v.push(a, b2); e.push([v.length - 2, v.length - 1]); };
       box(-0.85, 0, -0.55, 1.7, 0.07, 1.1);                      /* desktop slab */
-      seg([-0.78, 0.07, -0.48], [-0.78, 0.6, -0.48]);            /* legs */
-      seg([ 0.78, 0.07, -0.48], [ 0.78, 0.6, -0.48]);
-      seg([-0.78, 0.07,  0.48], [-0.78, 0.6,  0.48]);
-      seg([ 0.78, 0.07,  0.48], [ 0.78, 0.6,  0.48]);
+      box(-0.82, 0.07, -0.52, 0.09, 0.55, 0.09);                 /* legs (rectangular) */
+      box( 0.73, 0.07, -0.52, 0.09, 0.55, 0.09);
+      box(-0.82, 0.07,  0.43, 0.09, 0.55, 0.09);
+      box( 0.73, 0.07,  0.43, 0.09, 0.55, 0.09);
       box(-0.62, -0.045, -0.18, 0.5, 0.045, 0.36);               /* laptop base */
       const sb = v.length;                                        /* laptop screen tilted back */
       [[-0.62,-0.045,-0.18],[-0.12,-0.045,-0.18],[-0.12,-0.5,-0.34],[-0.62,-0.5,-0.34]].forEach(p => v.push(p));
@@ -946,29 +949,13 @@
       { sel: '#about',    shape: workspace(), side: 1,  spin: 0.0002,  col: '52,80,224', lw: 1.4, float: true, label: 'WORKSPACE' },
       { sel: '#work',     shape: tree(),      side: -1, spin: 0.00022, col: '14,154,108', lw: 2.6, fat: true, label: 'DECISION TREE' },
       { sel: '#skills',   shape: wave(),      side: 1,  spin: 0.00008, wave: true, col: '123,63,228', label: 'GRADIENT DESCENT' },
-      { sel: '#thoughts', shape: brain(),     brain: true, side: -1, spin: 0.0003, col: '219,39,119', lw: 1.4, mag: 1.25, label: 'NEURAL ACTIVITY' },
+      { sel: '#thoughts', shape: lightbulb(), bulb: true, side: -1, spin: 0.00028, col: '219,39,119', lw: 1.3, mag: 1.05, label: 'BRIGHT IDEAS' },
       { sel: '#hobbies',  rubik: makeRubik(), side: 1,  spin: 0.00014, col: '52,80,224', label: "RUBIK'S CUBE" }
     ].map(s => ({ ...s, el: document.querySelector(s.sel) })).filter(s => s.el);
 
-    /* 3x3 rotation matrices for physically-correct trackball dragging */
-    const matI = () => [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    const matMul = (A, B) => {
-      const R = new Array(9);
-      for (let r2 = 0; r2 < 3; r2++) for (let c2 = 0; c2 < 3; c2++){
-        R[r2 * 3 + c2] = A[r2 * 3] * B[c2] + A[r2 * 3 + 1] * B[3 + c2] + A[r2 * 3 + 2] * B[6 + c2];
-      }
-      return R;
-    };
-    const rotYm = a => [Math.cos(a), 0, Math.sin(a), 0, 1, 0, -Math.sin(a), 0, Math.cos(a)];
-    const rotXm = a => [1, 0, 0, 0, Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a)];
-    const matApply = (M, x, y, z) => [
-      M[0] * x + M[1] * y + M[2] * z,
-      M[3] * x + M[4] * y + M[5] * z,
-      M[6] * x + M[7] * y + M[8] * z
-    ];
-
-    /* hold-and-drag: screen-space trackball — the face toward you follows the
-       cursor, so the far side moves the opposite way, like a real object */
+    /* hold-and-drag: yaw (around vertical) + pitch (around horizontal) only —
+       never any roll, so shapes only turn on the x/y plane. The grabbed point
+       follows the cursor: drag right turns right, drag down tilts the top away. */
     let dragDef = null, dragX = 0, dragY = 0;
     window.addEventListener('mousedown', e => {
       for (const def of sceneDefs){
@@ -981,9 +968,8 @@
     });
     window.addEventListener('mousemove', e => {
       if (!dragDef) return;
-      const dx = e.clientX - dragX, dy = e.clientY - dragY;
-      const S = matMul(rotYm(-dx * 0.006), rotXm(dy * 0.006));
-      dragDef.M = matMul(S, dragDef.M || matI());
+      dragDef.yaw = (dragDef.yaw || 0) + (e.clientX - dragX) * 0.007;    /* right -> +ry -> front turns right */
+      dragDef.pitch = (dragDef.pitch || 0) - (e.clientY - dragY) * 0.007; /* down -> -rx -> front tilts down */
       dragX = e.clientX; dragY = e.clientY;
     });
     window.addEventListener('mouseup', () => { dragDef = null; document.body.style.userSelect = ''; });
@@ -1004,17 +990,13 @@
       if (def.float) cy += Math.sin(t * 0.0012) * 8;     /* gentle floating bob */
       const scale = Math.min(margin * 0.72, Math.min(W, H) * 0.17) * (0.75 + vis * 0.25) * (def.mag || 1);
       def._cx = cx; def._cy = cy; def._r = scale * 1.5;   /* hit area for drag-rotation */
-      const ry = t * def.spin + window.scrollY * (def.wave ? 0.0004 : 0.0013);
-      const rx = def.wave ? 0.95 : 0.42 + Math.sin(t * 0.00012) * 0.1;
+      const ry = t * def.spin + window.scrollY * (def.wave ? 0.0004 : 0.0013) + (def.yaw || 0);
+      const rx = (def.wave ? 0.95 : 0.42 + Math.sin(t * 0.00012) * 0.1) + (def.pitch || 0);
       const cosY = Math.cos(ry), sinY = Math.sin(ry);
       const cosX = Math.cos(rx), sinX = Math.sin(rx);
       const proj = (x, y, z) => {
-        let px = x * cosY + z * sinY, pz = -x * sinY + z * cosY;
-        let py = y * cosX - pz * sinX; pz = y * sinX + pz * cosX;
-        if (def.M){
-          const q = matApply(def.M, px, py, pz);
-          px = q[0]; py = q[1]; pz = q[2];
-        }
+        let px = x * cosY + z * sinY, pz = -x * sinY + z * cosY;   /* yaw about vertical */
+        let py = y * cosX - pz * sinX; pz = y * sinX + pz * cosX;  /* pitch about horizontal — no roll */
         const f = 3.4 / (3.4 + pz);
         return [cx + px * scale * f, cy + py * scale * f, pz];
       };
@@ -1081,45 +1063,37 @@
         pts.forEach(p => { ctx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
       }
 
-      /* neurons firing: bright hotspots pulse at nodes + signals travel edges */
-      if (def.brain){
-        if (!def.hot){
-          def.hot = [];
-          for (let i = 0; i < 10; i++) def.hot.push({ vi: Math.floor(rnd() * geom.v.length), ph: rnd() * Math.PI * 2, sp: 0.003 + rnd() * 0.004 });
+      /* lightbulb: occasionally lights up with a warm yellow aura + glowing filament */
+      if (def.bulb){
+        const g = def.shape;
+        let gx = 0, gy = 0;                       /* glass center in screen space */
+        for (let i = 0; i < g.glassCount; i++){ gx += pts[i][0]; gy += pts[i][1]; }
+        gx /= g.glassCount; gy /= g.glassCount;
+        const cyc = (t * 0.00016 + 0.15) % 1;     /* on ~30% of the time */
+        const target = cyc < 0.3 ? 1 : 0;
+        def.lit = (def.lit || 0) + (target - (def.lit || 0)) * 0.07;
+        const L = def.lit;
+        if (L > 0.02){
+          const rg = ctx.createRadialGradient(gx, gy, scale * 0.08, gx, gy, scale * 1.7);
+          rg.addColorStop(0, 'rgba(253,214,92,' + (0.32 * L * vis) + ')');
+          rg.addColorStop(0.45, 'rgba(252,196,74,' + (0.14 * L * vis) + ')');
+          rg.addColorStop(1, 'rgba(252,196,74,0)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(gx - scale * 1.7, gy - scale * 1.7, scale * 3.4, scale * 3.4);
         }
-        def.hot.forEach(H => {
-          const a = 0.5 + 0.5 * Math.sin(t * H.sp + H.ph);   /* firing rhythm */
-          if (a < 0.12) { if (rnd() < 0.03) H.vi = Math.floor(rnd() * geom.v.length); return; }
-          const p = pts[H.vi];
-          ctx.save();
-          ctx.shadowColor = 'rgba(' + def.col + ',0.95)';
-          ctx.shadowBlur = 14 * a;
-          ctx.fillStyle = 'rgba(' + def.col + ',' + Math.min(op * 3.4 * a, 0.95) + ')';
-          ctx.beginPath();
-          ctx.arc(p[0], p[1], 1.5 + 3 * a, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        });
-        if (!def.pulses) def.pulses = [];
-        if (def.pulses.length < 5 && rnd() < 0.08){
-          def.pulses.push({ ei: Math.floor(rnd() * geom.e.length), k: 0 });
+        /* filament: warm and glowing when lit, faint pink-warm when off */
+        ctx.save();
+        ctx.strokeStyle = 'rgba(253,206,84,' + Math.min(0.85 * L * vis + 0.12 * op, 0.95) + ')';
+        ctx.lineWidth = 1.6;
+        ctx.shadowColor = 'rgba(253,206,84,0.9)';
+        ctx.shadowBlur = 9 * L;
+        ctx.beginPath();
+        for (let i = 0; i < g.filN; i++){
+          const p = pts[g.filament + i];
+          if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
         }
-        def.pulses = def.pulses.filter(P => {
-          P.k += 0.05;
-          const [a, b] = geom.e[P.ei];
-          const q = Math.min(1, P.k);
-          const px = pts[a][0] + (pts[b][0] - pts[a][0]) * q;
-          const py = pts[a][1] + (pts[b][1] - pts[a][1]) * q;
-          ctx.save();
-          ctx.shadowColor = 'rgba(' + def.col + ',0.9)';
-          ctx.shadowBlur = 10;
-          ctx.fillStyle = 'rgba(' + def.col + ',' + Math.min(op * 3, 0.9) + ')';
-          ctx.beginPath();
-          ctx.arc(px, py, 2.4, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-          return P.k < 1.1;
-        });
+        ctx.stroke();
+        ctx.restore();
       }
 
       /* gradient descent on the bowl: several balls race to the minimum */
@@ -1348,21 +1322,21 @@
           h.appendChild(s);
         });
         const spans = h.querySelectorAll('.ch');
-        ScrollTrigger.create({
-          trigger: h, start: 'top 88%', once: true,
-          onEnter: () => {
-            gsap.from(spans, { yPercent: 60, opacity: 0, duration: 0.35, ease: 'power2.out', stagger: 0.018 });
-            let f = 0;
-            const iv = setInterval(() => {
-              f++;
-              spans.forEach((s, i) => {
-                if (f > i * 1.3 + 4) s.textContent = finals[i];
-                else if (finals[i] !== ' ') s.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-              });
-              if (f > finals.length * 1.3 + 5) clearInterval(iv);
-            }, 26);
-          }
-        });
+        let iv = null;
+        const decrypt = () => {                          /* replays every time it enters view */
+          if (iv) clearInterval(iv);
+          gsap.fromTo(spans, { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.3, ease: 'power2.out', stagger: 0.015 });
+          let f = 0;
+          iv = setInterval(() => {
+            f++;
+            spans.forEach((s, i) => {
+              if (f > i * 1.1 + 4) s.textContent = finals[i];
+              else if (finals[i] !== ' ') s.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+            });
+            if (f > finals.length * 1.1 + 5){ clearInterval(iv); iv = null; }
+          }, 22);
+        };
+        ScrollTrigger.create({ trigger: h, start: 'top 88%', onEnter: decrypt, onEnterBack: decrypt });
       });
 
       /* gentle parallax on the hero card */
