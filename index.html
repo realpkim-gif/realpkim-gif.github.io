@@ -841,12 +841,20 @@
       [[b1, b2], [b2, b3], [b3, b4]].forEach(([a, b]) => { for (let i = 0; i < SEG; i += step) e.push([a + i, b + i]); });
       const tip = v.length; v.push([0, 0.58, 0]);           /* contact tip */
       for (let i = 0; i < SEG; i += 5) e.push([tip, b4 + i]);
-      /* filament shaped as a capital P (stem + top bowl), suspended in the glass */
-      const fs = v.length;
-      [[-0.17, 0.14, 0], [-0.17, -0.58, 0], [0.16, -0.58, 0], [0.16, -0.2, 0], [-0.17, -0.2, 0]]
-        .forEach(p => v.push(p));
-      for (let i = 0; i < 4; i++) e.push([fs + i, fs + i + 1]);
-      return { v, e, glassCount, filament: fs, filN: 5 };
+      /* filament shaped as a solid capital P, built from rectangular prisms */
+      const filStart = v.length, filEdges = [], hz = 0.055;
+      const prism = (cx2, cy2, hw, hh) => {                 /* axis-aligned box in x/y, thin in z */
+        const b = v.length;
+        [[cx2-hw,cy2-hh,-hz],[cx2+hw,cy2-hh,-hz],[cx2+hw,cy2+hh,-hz],[cx2-hw,cy2+hh,-hz],
+         [cx2-hw,cy2-hh,hz],[cx2+hw,cy2-hh,hz],[cx2+hw,cy2+hh,hz],[cx2-hw,cy2+hh,hz]].forEach(p => v.push(p));
+        [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]
+          .forEach(([a, c]) => filEdges.push([b + a, b + c]));
+      };
+      prism(-0.14, -0.22, 0.055, 0.38);                     /* stem (full height, left) */
+      prism( 0.01, -0.55, 0.16,  0.06);                     /* top bar */
+      prism( 0.12, -0.40, 0.055, 0.19);                     /* right bar (upper) */
+      prism( 0.01, -0.22, 0.16,  0.06);                     /* middle bar */
+      return { v, e, glassCount, filStart, filEdges };
     }
     /* floating mini desk: laptop, coffee, notebook, pencil (y+ is down) */
     function workspace(){
@@ -1063,8 +1071,9 @@
           ctx.fill();
         });
       } else {
+        const skip = def.bulb ? geom.filStart : Infinity;   /* P prisms drawn separately, no dots */
         ctx.fillStyle = 'rgba(' + def.col + ',' + Math.min(op * 1.6, 0.55) + ')';
-        pts.forEach(p => { ctx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
+        pts.forEach((p, i) => { if (i < skip) ctx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
       }
 
       /* lightbulb: occasionally lights up with a warm yellow aura + glowing filament */
@@ -1085,17 +1094,17 @@
           ctx.fillStyle = rg;
           ctx.fillRect(gx - scale * 1.7, gy - scale * 1.7, scale * 3.4, scale * 3.4);
         }
-        /* filament: warm and glowing when lit, faint pink-warm when off */
+        /* solid P prisms: warm and glowing when lit, faint pink-warm when off */
         ctx.save();
-        ctx.strokeStyle = 'rgba(253,206,84,' + Math.min(0.85 * L * vis + 0.12 * op, 0.95) + ')';
-        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = 'rgba(253,206,84,' + Math.min(0.8 * L * vis + 0.16 * op, 0.95) + ')';
+        ctx.lineWidth = 1.5;
         ctx.shadowColor = 'rgba(253,206,84,0.9)';
         ctx.shadowBlur = 9 * L;
         ctx.beginPath();
-        for (let i = 0; i < g.filN; i++){
-          const p = pts[g.filament + i];
-          if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
-        }
+        g.filEdges.forEach(([a, b]) => {
+          ctx.moveTo(pts[a][0], pts[a][1]);
+          ctx.lineTo(pts[b][0], pts[b][1]);
+        });
         ctx.stroke();
         ctx.restore();
       }
