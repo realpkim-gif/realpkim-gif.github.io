@@ -783,19 +783,16 @@
         net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, w: (rnd() - 0.5) * 2, x: 0, y: 0, hs: 0, pop: 1, dx: (rnd() - 0.5) * 2, dy: (rnd() - 0.5) * 2 });
       }
     });
-    /* precompute sparse connections once: each node links to a few RANDOM nodes in
-       the next layer (organic criss-cross look, far fewer lines to stroke each frame) */
+    /* precompute sparse connections once: each node links to its nearest few in the
+       next layer (neat layered look, far fewer lines to stroke each frame) */
     const edgesByLayer = [];
+    const rel = nd => nd.n > 1 ? nd.i / (nd.n - 1) : 0.5;
     const K = 4;
     for (let li = 0; li < LAYERS.length - 1; li++){
       const arr = [], from = net.filter(n => n.li === li), to = net.filter(n => n.li === li + 1);
       for (const a of from){
-        const pool = to.map((_, i) => i);
-        for (let k = 0; k < K && pool.length; k++){
-          const r = Math.floor(rnd() * pool.length);
-          arr.push([a, to[pool[r]]]);
-          pool.splice(r, 1);
-        }
+        const near = to.slice().sort((p, q) => Math.abs(rel(p) - rel(a)) - Math.abs(rel(q) - rel(a))).slice(0, K);
+        for (const b of near) arr.push([a, b]);
       }
       edgesByLayer.push(arr);
     }
@@ -1253,13 +1250,7 @@
             const cg = Math.round(c0[1] + (23 - c0[1]) * dissolve);
             const cb = Math.round(c0[2] + (26 - c0[2]) * dissolve);
             const alpha = ((0.45 + 0.45 * form) * (1 - dissolve) + 0.28 * dissolve) * dust;
-            /* cheap glow: a soft translucent halo behind each node (no costly shadowBlur) */
-            fctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + (alpha * (0.22 + 0.4 * nd.hs)) + ')';
-            fctx.beginPath();
-            fctx.arc(nd.x, nd.y, rad * (2.2 + nd.hs), 0, Math.PI * 2);
-            fctx.fill();
-            /* solid node core */
-            fctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + alpha + ')';
+            fctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + alpha + ')';   /* flat fill — no per-node glow */
             fctx.beginPath();
             fctx.arc(nd.x, nd.y, rad, 0, Math.PI * 2);
             fctx.fill();
