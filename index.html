@@ -795,11 +795,17 @@
         net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, w: (rnd() - 0.5) * 2, x: 0, y: 0, hs: 0, pop: 1, dx: (rnd() - 0.5) * 2, dy: (rnd() - 0.5) * 2 });
       }
     });
-    /* precompute connections once (grouped by source layer) instead of scanning every frame */
+    /* precompute sparse connections once: each node links to its nearest few in the
+       next layer (keeps the dense look, far fewer lines to stroke each frame) */
     const edgesByLayer = [];
+    const rel = nd => nd.n > 1 ? nd.i / (nd.n - 1) : 0.5;
+    const K = 4;
     for (let li = 0; li < LAYERS.length - 1; li++){
       const arr = [], from = net.filter(n => n.li === li), to = net.filter(n => n.li === li + 1);
-      for (const a of from) for (const b of to) arr.push([a, b]);
+      for (const a of from){
+        const near = to.slice().sort((p, q) => Math.abs(rel(p) - rel(a)) - Math.abs(rel(q) - rel(a))).slice(0, K);
+        for (const b of near) arr.push([a, b]);
+      }
       edgesByLayer.push(arr);
     }
     const smooth = (a, b, x) => {
@@ -1209,7 +1215,7 @@
           if (formation > 0.03){
             fctx.lineWidth = 1;
             for (let li = 0; li < edgesByLayer.length; li++){
-              fctx.strokeStyle = 'rgba(' + LAYER_COLS[li] + ',' + 0.22 * formation + ')';
+              fctx.strokeStyle = 'rgba(' + LAYER_COLS[li] + ',' + 0.14 * formation + ')';
               fctx.beginPath();
               for (const [a, b] of edgesByLayer[li]){ fctx.moveTo(a.x, a.y); fctx.lineTo(b.x, b.y); }
               fctx.stroke();
