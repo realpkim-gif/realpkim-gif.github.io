@@ -795,6 +795,13 @@
         net.push({ li, i, n, nx: rnd(), ny: rnd(), ph: rnd() * Math.PI * 2, w: (rnd() - 0.5) * 2, x: 0, y: 0, hs: 0, pop: 1, dx: (rnd() - 0.5) * 2, dy: (rnd() - 0.5) * 2 });
       }
     });
+    /* precompute connections once (grouped by source layer) instead of scanning every frame */
+    const edgesByLayer = [];
+    for (let li = 0; li < LAYERS.length - 1; li++){
+      const arr = [], from = net.filter(n => n.li === li), to = net.filter(n => n.li === li + 1);
+      for (const a of from) for (const b of to) arr.push([a, b]);
+      edgesByLayer.push(arr);
+    }
     const smooth = (a, b, x) => {
       x = Math.max(0, Math.min(1, (x - a) / (b - a)));
       return x * x * (3 - 2 * x);
@@ -1198,15 +1205,13 @@
             nd.x = nd.nx * W + (tx - nd.nx * W) * formation;   /* stationary — no mouse parallax */
             nd.y = nd.ny * H + (ty - nd.ny * H) * formation + wob;
           }
-          /* edges, colored by source layer; gone once dissolved */
+          /* edges from the precomputed list, colored by source layer */
           if (formation > 0.03){
             fctx.lineWidth = 1;
-            for (let li = 0; li < LAYERS.length - 1; li++){
+            for (let li = 0; li < edgesByLayer.length; li++){
               fctx.strokeStyle = 'rgba(' + LAYER_COLS[li] + ',' + 0.22 * formation + ')';
               fctx.beginPath();
-              for (const a of net) for (const b of net){
-                if (a.li === li && b.li === li + 1){ fctx.moveTo(a.x, a.y); fctx.lineTo(b.x, b.y); }
-              }
+              for (const [a, b] of edgesByLayer[li]){ fctx.moveTo(a.x, a.y); fctx.lineTo(b.x, b.y); }
               fctx.stroke();
             }
           }
@@ -1217,7 +1222,6 @@
                 return d < 34 && (!best || d < best.d) ? { nd, d } : best;
               }, null)
             : null;
-          fctx.save();
           for (const nd of net){
             /* nodes swell smoothly as the cursor nears, with distance falloff */
             const dm = mouse.x > -999 ? Math.hypot(nd.x - mouse.x, nd.y - mouse.y) : 1e9;
@@ -1230,9 +1234,7 @@
             const cg = Math.round(c0[1] + (23 - c0[1]) * dissolve);
             const cb = Math.round(c0[2] + (26 - c0[2]) * dissolve);
             const alpha = ((0.45 + 0.45 * form) * (1 - dissolve) + 0.28 * dissolve) * dust;
-            fctx.shadowColor = 'rgba(' + LAYER_COLS[nd.li] + ',0.9)';
-            fctx.shadowBlur = (8 + 20 * nd.hs) * formation;
-            fctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + alpha + ')';
+            fctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + alpha + ')';   /* flat fill — no per-node glow */
             fctx.beginPath();
             fctx.arc(nd.x, nd.y, rad, 0, Math.PI * 2);
             fctx.fill();
@@ -1242,15 +1244,23 @@
             fctx.font = '11px "JetBrains Mono", monospace';
             fctx.textAlign = 'center';
             fctx.fillStyle = 'rgba(52,80,224,' + 0.75 * formation * dust + ')';
-            fctx.fillText('DEEP NEURAL NETWORK — 5·8·8·8·5', cx, cy + lh / 2 + 52 + Math.sin(t * 0.0018) * 4);
+            fctx.fillText('DEEP NEURAL NETWORK — 6·11·15·15·11·6', cx, cy + lh / 2 + 52 + Math.sin(t * 0.0018) * 4);
             fctx.textAlign = 'left';
           }
-          fctx.restore();
         }
         /* futuristic HUD readout on hover */
         if (hovered){
           const nd = hovered.nd;
           const col = LAYER_COLS[nd.li];
+          /* one cheap glow, only on the hovered node */
+          fctx.save();
+          fctx.shadowColor = 'rgba(' + col + ',0.9)';
+          fctx.shadowBlur = 14;
+          fctx.fillStyle = 'rgba(' + col + ',0.95)';
+          fctx.beginPath();
+          fctx.arc(nd.x, nd.y, 4.5, 0, Math.PI * 2);
+          fctx.fill();
+          fctx.restore();
           /* growing ring around the hovered node, sized like the old cursor ring */
           fctx.strokeStyle = 'rgba(' + col + ',0.8)';
           fctx.lineWidth = 1.5;
