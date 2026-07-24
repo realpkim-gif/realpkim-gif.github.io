@@ -452,8 +452,8 @@
   <nav>
     <div class="logo">patrick<span>.</span>kim</div>
     <div class="nav-links">
-      <a href="#work">Work</a>
       <a href="#about">About</a>
+      <a href="#work">Work</a>
       <a href="#skills">Skills</a>
       <a href="#thoughts">Thoughts</a>
       <a href="#contact">Contact</a>
@@ -767,18 +767,6 @@
     resize();
     window.addEventListener('resize', resize);
 
-    /* ambient sparkles */
-    const COUNT = Math.min(90, Math.round(W * H / 16000));
-    const dots = [];
-    for (let i = 0; i < COUNT; i++){
-      dots.push({
-        x: Math.random() * W, y: Math.random() * H,
-        vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
-        r: 0.8 + Math.random() * 1.4,
-        ph: Math.random() * Math.PI * 2,
-        sp: 0.4 + Math.random() * 0.8
-      });
-    }
 
     /* scroll-driven DNN: noise assembles into a 5-8-8-8-5 network in the intro */
     const introStage = document.querySelector('.intro-stage');
@@ -862,30 +850,28 @@
       [[b1, b2], [b2, b3], [b3, b4]].forEach(([a, b]) => { for (let i = 0; i < SEG; i += step) e.push([a + i, b + i]); });
       const tip = v.length; v.push([0, 0.58, 0]);           /* contact tip */
       for (let i = 0; i < SEG; i += 5) e.push([tip, b4 + i]);
-      /* filament shaped as a solid capital P, built from rectangular prisms */
-      const filStart = v.length, filEdges = [], hz = 0.055;
+      /* filament shaped as a solid capital P, built from filled rectangular prisms */
+      const filStart = v.length, filBoxes = [], hz = 0.07;
       const prism = (cx2, cy2, hw, hh) => {                 /* axis-aligned box in x/y, thin in z */
-        const b = v.length;
+        filBoxes.push(v.length);
         [[cx2-hw,cy2-hh,-hz],[cx2+hw,cy2-hh,-hz],[cx2+hw,cy2+hh,-hz],[cx2-hw,cy2+hh,-hz],
          [cx2-hw,cy2-hh,hz],[cx2+hw,cy2-hh,hz],[cx2+hw,cy2+hh,hz],[cx2-hw,cy2+hh,hz]].forEach(p => v.push(p));
-        [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]
-          .forEach(([a, c]) => filEdges.push([b + a, b + c]));
       };
-      prism(-0.14, -0.22, 0.055, 0.38);                     /* stem (full height, left) */
-      prism( 0.01, -0.55, 0.16,  0.06);                     /* top bar */
-      prism( 0.12, -0.40, 0.055, 0.19);                     /* right bar (upper) */
-      prism( 0.01, -0.22, 0.16,  0.06);                     /* middle bar */
-      return { v, e, glassCount, filStart, filEdges };
+      prism(-0.14, -0.22, 0.06, 0.38);                      /* stem (full height, left) */
+      prism( 0.01, -0.55, 0.16, 0.06);                      /* top bar */
+      prism( 0.12, -0.40, 0.06, 0.19);                      /* right bar (upper) */
+      prism( 0.01, -0.22, 0.16, 0.06);                      /* middle bar */
+      return { v, e, glassCount, filStart, filBoxes };
     }
     /* floating mini desk: laptop, coffee, notebook, pencil (y+ is down) */
     function workspace(){
-      const v = [], e = [];
+      const v = [], e = [], faces = [];
       const box = (x0, y0, z0, w, h, d) => {
         const b = v.length;
         [[x0,y0,z0],[x0+w,y0,z0],[x0+w,y0,z0+d],[x0,y0,z0+d],
          [x0,y0+h,z0],[x0+w,y0+h,z0],[x0+w,y0+h,z0+d],[x0,y0+h,z0+d]].forEach(p => v.push(p));
-        e.push([b,b+1],[b+1,b+2],[b+2,b+3],[b+3,b],[b+4,b+5],[b+5,b+6],[b+6,b+7],[b+7,b+4],
-               [b,b+4],[b+1,b+5],[b+2,b+6],[b+3,b+7]);
+        [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
+          .forEach(f => faces.push(f.map(i => b + i)));   /* filled faces */
       };
       const seg = (a, b2) => { v.push(a, b2); e.push([v.length - 2, v.length - 1]); };
       box(-0.85, 0, -0.55, 1.7, 0.07, 1.1);                      /* desktop slab */
@@ -896,7 +882,7 @@
       box(-0.62, -0.045, -0.18, 0.5, 0.045, 0.36);               /* laptop base */
       const sb = v.length;                                        /* laptop screen tilted back */
       [[-0.62,-0.045,-0.18],[-0.12,-0.045,-0.18],[-0.12,-0.5,-0.34],[-0.62,-0.5,-0.34]].forEach(p => v.push(p));
-      e.push([sb,sb+1],[sb+1,sb+2],[sb+2,sb+3],[sb+3,sb]);
+      faces.push([sb, sb+1, sb+2, sb+3]);
       seg([-0.55,-0.42,-0.315],[-0.19,-0.42,-0.315]);            /* code lines on screen */
       seg([-0.55,-0.34,-0.29],[-0.30,-0.34,-0.29]);
       seg([-0.55,-0.26,-0.265],[-0.36,-0.26,-0.265]);
@@ -914,7 +900,7 @@
       seg([0.46, -0.025, 0.16], [0.46, -0.025, 0.46]);           /* spine */
       seg([0.05, -0.01, 0.3], [0.22, -0.01, 0.42]);              /* pencil */
       seg([0.22, -0.01, 0.42], [0.245, -0.01, 0.445]);           /* tip */
-      return { v, e };
+      return { v, e, faces };
     }
     /* 3x3x3 rubik cube with periodic layer twists */
     function makeRubik(){
@@ -976,7 +962,7 @@
       return { v, e };
     }
     const sceneDefs = [
-      { sel: '#about',    shape: workspace(), side: 1,  spin: 0.0002,  col: '52,80,224', lw: 1.4, float: true },
+      { sel: '#about',    shape: workspace(), side: 1,  spin: 0.0002,  col: '52,80,224', lw: 1.2, float: true, solid: true },
       { sel: '#work',     shape: tree(),      side: -1, spin: 0.00022, col: '14,154,108', lw: 2.6, fat: true, label: 'DECISION TREE' },
       { sel: '#skills',   shape: wave(),      side: 1,  spin: 0.00008, wave: true, col: '123,63,228', label: 'GRADIENT DESCENT' },
       { sel: '#thoughts', shape: lightbulb(), bulb: true, side: -1, spin: 0.00028, col: '219,39,119', lw: 1.3, mag: 1.05 },
@@ -1073,6 +1059,32 @@
         return;
       }
 
+      /* solid shape (desk): bg-filled faces occlude back edges, thin details on top */
+      if (def.solid){
+        const geom = def.shape;
+        const pts = geom.v.map(([x, y, z]) => proj(x, y, z));
+        const faces = geom.faces.map(f => {
+          const q = f.map(i => pts[i]);
+          return { q, d: q.reduce((s, p) => s + p[2], 0) / q.length };
+        }).sort((a, b) => b.d - a.d);
+        ctx.lineWidth = def.lw || 1;
+        ctx.fillStyle = '#F7F7F4';
+        ctx.strokeStyle = 'rgba(' + def.col + ',' + Math.min(op * 1.5, 0.55) + ')';
+        faces.forEach(({ q }) => {
+          ctx.beginPath();
+          ctx.moveTo(q[0][0], q[0][1]);
+          for (let i = 1; i < q.length; i++) ctx.lineTo(q[i][0], q[i][1]);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        });
+        ctx.strokeStyle = 'rgba(' + def.col + ',' + op + ')';
+        ctx.beginPath();
+        geom.e.forEach(([a, b]) => { ctx.moveTo(pts[a][0], pts[a][1]); ctx.lineTo(pts[b][0], pts[b][1]); });
+        ctx.stroke();
+        return;
+      }
+
       const geom = def.shape;
       const pts = geom.v.map(([x, y, z]) => proj(x, def.wave ? surf(x, z) : y, z));
       ctx.strokeStyle = 'rgba(' + def.col + ',' + (def.fat ? Math.min(op * 1.4, 0.5) : op) + ')';
@@ -1115,19 +1127,29 @@
           ctx.fillStyle = rg;
           ctx.fillRect(gx - scale * 1.7, gy - scale * 1.7, scale * 3.4, scale * 3.4);
         }
-        /* solid P prisms: warm and glowing when lit, faint pink-warm when off */
-        ctx.save();
-        ctx.strokeStyle = 'rgba(253,206,84,' + Math.min(0.8 * L * vis + 0.16 * op, 0.95) + ')';
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = 'rgba(253,206,84,0.9)';
-        ctx.shadowBlur = 9 * L;
-        ctx.beginPath();
-        g.filEdges.forEach(([a, b]) => {
-          ctx.moveTo(pts[a][0], pts[a][1]);
-          ctx.lineTo(pts[b][0], pts[b][1]);
+        /* solid capital-P prisms — always visible; warm amber, brightening when lit */
+        const pr = Math.round(224 + (252 - 224) * L);
+        const pg = Math.round(168 + (214 - 168) * L);
+        const pb = Math.round(74 + (92 - 74) * L);
+        const faceA = Math.min(op * 2.6, 0.78);
+        const BF = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+        const pf = [];
+        g.filBoxes.forEach(base => BF.forEach(fi => {
+          const q = fi.map(i => pts[base + i]);
+          pf.push({ q, d: (q[0][2] + q[1][2] + q[2][2] + q[3][2]) / 4 });
+        }));
+        pf.sort((a, b) => b.d - a.d);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(' + pr + ',' + pg + ',' + pb + ',' + Math.min(faceA * 1.15, 0.9) + ')';
+        pf.forEach(({ q }) => {
+          ctx.fillStyle = 'rgba(' + pr + ',' + pg + ',' + pb + ',' + faceA + ')';
+          ctx.beginPath();
+          ctx.moveTo(q[0][0], q[0][1]);
+          for (let i = 1; i < 4; i++) ctx.lineTo(q[i][0], q[i][1]);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
         });
-        ctx.stroke();
-        ctx.restore();
       }
 
       /* gradient descent on the bowl: several balls race to the minimum */
@@ -1175,18 +1197,6 @@
 
     function frame(t){
       ctx.clearRect(0, 0, W, H);
-
-      /* sparkles */
-      for (const d of dots){
-        d.x += d.vx; d.y += d.vy;
-        if (d.x < -5) d.x = W + 5; if (d.x > W + 5) d.x = -5;
-        if (d.y < -5) d.y = H + 5; if (d.y > H + 5) d.y = -5;
-        const tw = 0.06 + (Math.sin(t * 0.001 * d.sp + d.ph) + 1) * 0.07;
-        ctx.fillStyle = 'rgba(20,23,26,' + tw + ')';
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
 
       /* wireframes */
       sceneDefs.forEach(def => drawShape(def, t));
