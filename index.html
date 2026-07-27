@@ -823,9 +823,9 @@
        and a hand resting on the chin. Built from scratch, spins via the base rotation. */
     function thinkingEmoji(){
       const v = [], faces = [], lines = [];
-      const YEL = [255, 200, 62], EYE = [78, 54, 40], BROW = [96, 66, 44], MOUTH = [150, 96, 66], HAND = [253, 197, 70];
-      const face = (idx, col, sh) => faces.push({ q: idx, col, sh, pri: 1 });
-      /* shaded UV sphere (light from upper-left-front) */
+      const YEL = [255, 200, 62], EYE = [58, 40, 30], BROW = [58, 40, 30], MOUTH = [78, 52, 38], HAND = [253, 197, 70];
+      const face = (idx, col, sh, ol) => faces.push({ q: idx, col, sh, ol, pri: 1 });
+      /* shaded UV sphere, no grid outline (ol:'none') */
       const sphere = (cx, cy, cz, r, latN, lonN, col) => {
         const rows = [];
         for (let i = 0; i <= latN; i++){
@@ -841,38 +841,44 @@
           const j2 = (j+1) % lonN, a = rows[i][j], b = rows[i][j2], c = rows[i+1][j2], d = rows[i+1][j];
           const px = v[a][0]-cx, py = v[a][1]-cy, pz = v[a][2]-cz, ln = Math.hypot(px,py,pz) || 1;
           const dot = (px/ln)*(-0.4) + (py/ln)*(-0.55) + (pz/ln)*0.73;
-          face([a,b,c,d], col, 0.74 + 0.3 * Math.max(0, dot));
+          face([a,b,c,d], col, 0.8 + 0.22 * Math.max(0, dot), 'none');
         }
       };
-      /* box between two x/y points at depth z (brows, mouth, fingers) */
-      const bar = (x1,y1,x2,y2,z, thick, depth, col) => {
+      /* flat front-facing disc as one clean polygon (eyes) */
+      const disc = (cx, cy, cz, r, segs, col) => {
+        const b = v.length;
+        for (let i = 0; i < segs; i++){ const a = i / segs * Math.PI * 2; v.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r, cz]); }
+        face(Array.from({ length: segs }, (_, i) => b + i), col, 1.0, 'black');
+      };
+      /* black-outlined box between two x/y points at depth z (brows, mouth, fingers) */
+      const bar = (x1,y1,x2,y2,z, thick, depth, col, ol) => {
         const dx = x2-x1, dy = y2-y1, len = Math.hypot(dx,dy) || 1, nx = -dy/len*thick/2, ny = dx/len*thick/2, hz = depth/2, b = v.length;
         [[x1+nx,y1+ny,z-hz],[x2+nx,y2+ny,z-hz],[x2-nx,y2-ny,z-hz],[x1-nx,y1-ny,z-hz],
          [x1+nx,y1+ny,z+hz],[x2+nx,y2+ny,z+hz],[x2-nx,y2-ny,z+hz],[x1-nx,y1-ny,z+hz]].forEach(p => v.push(p));
         [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
-          .forEach((f,i) => face(f.map(k => b+k), col, i===4 ? 1.0 : 0.82));
+          .forEach((f,i) => face(f.map(k => b+k), col, i===4 ? 1.0 : 0.82, ol));
       };
-
-      sphere(0, 0, 0, 1.0, 13, 18, YEL);                       /* the face */
-      sphere(-0.30, -0.12, 0.90, 0.14, 5, 7, EYE);             /* eyes */
-      sphere( 0.30, -0.12, 0.90, 0.14, 5, 7, EYE);
-      bar(-0.50, -0.40, -0.12, -0.44, 0.92, 0.10, 0.10, BROW); /* left brow (level) */
-      bar( 0.14, -0.50,  0.50, -0.40, 0.92, 0.10, 0.10, BROW); /* right brow (raised, skeptical) */
-      bar(-0.16, 0.34, 0.30, 0.30, 0.99, 0.09, 0.08, MOUTH);   /* pursed, slightly slanted mouth */
-
-      /* hand resting on the chin (bottom-front), thumb up the jaw + index across the cheek */
-      const box = (cx,cy,cz,w,h,d,col) => {
+      const box = (cx,cy,cz,w,h,d,col,ol) => {
         const hx=w/2, hy=h/2, hz=d/2, b=v.length;
         [[-hx,-hy,-hz],[hx,-hy,-hz],[hx,hy,-hz],[-hx,hy,-hz],[-hx,-hy,hz],[hx,-hy,hz],[hx,hy,hz],[-hx,hy,hz]]
           .forEach(p => v.push([cx+p[0],cy+p[1],cz+p[2]]));
         [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
-          .forEach((f,i) => face(f.map(k => b+k), col, [0.95,0.6,0.86,0.72,1.0,0.72][i]));
+          .forEach((f,i) => face(f.map(k => b+k), col, [0.95,0.6,0.86,0.72,1.0,0.72][i], ol));
       };
-      box(0.06, 0.66, 0.74, 0.44, 0.30, 0.30, HAND);           /* curled fist under the chin */
-      bar(-0.02, 0.60, 0.30, 0.22, 0.66, 0.05, 0.05, [222,168,54]);  /* finger grooves */
-      bar(-0.02, 0.66, 0.30, 0.28, 0.66, 0.05, 0.05, [222,168,54]);
-      bar(0.02, 0.58, -0.34, 0.30, 0.94, 0.15, 0.16, HAND);    /* index finger across the cheek */
-      bar(0.30, 0.60, 0.40, 0.30, 0.86, 0.13, 0.14, HAND);     /* thumb up the jaw */
+
+      sphere(0, 0, 0, 1.0, 16, 22, YEL);                       /* smooth face */
+      disc(-0.30, -0.13, 0.95, 0.17, 16, EYE);                 /* eyes */
+      disc( 0.30, -0.13, 0.95, 0.17, 16, EYE);
+      bar(-0.52, -0.36, -0.10, -0.42, 0.98, 0.10, 0.05, BROW, 'black'); /* left brow */
+      bar( 0.12, -0.52,  0.52, -0.36, 0.98, 0.10, 0.05, BROW, 'black'); /* right brow (raised, skeptical) */
+      bar(-0.20, 0.36, 0.30, 0.30, 1.00, 0.09, 0.05, MOUTH, 'black');   /* flat, slightly slanted mouth */
+
+      /* hand on the chin — popped well forward, loose fist with four fingers, thumb + extended index */
+      box(0.02, 0.66, 1.06, 0.5, 0.34, 0.28, HAND, 'black');   /* fist */
+      [-0.17, -0.055, 0.06, 0.175].forEach((fx, k) =>          /* four curled fingers on the front */
+        box(fx, 0.5, 1.2, 0.1, 0.24, 0.16, HAND, 'black'));
+      bar(0.05, 0.52, -0.26, 0.08, 1.12, 0.16, 0.17, HAND, 'black');   /* index finger up the cheek */
+      bar(0.26, 0.62, 0.4, 0.36, 1.02, 0.15, 0.16, HAND, 'black');     /* thumb up the jaw */
       return { v, faces, lines };
     }
     /* floating mini desk: laptop, coffee, notebook, pencil (y+ is down) */
@@ -880,7 +886,7 @@
       const v = [], faces = [], lines = [];
       /* modern light-house palette */
       const OAK = [216,198,172], OAK_LEG = [198,178,150], SILVER = [200,206,214],
-            SCREEN = [126,156,186], MUG = [198,150,128], BOOK = [196,186,212],
+            SCREEN = [126,156,186], BOOK = [196,186,212],
             PENCIL = [230,200,110], CODE = [236,241,247];
       /* pri: 0 = furniture (drawn first), 1 = items on top (drawn after) */
       const box = (x0, y0, z0, w, h, d, col, pri) => {
@@ -906,12 +912,6 @@
       line([-0.55,-0.5,-0.315],[-0.19,-0.5,-0.315], CODE);       /* code lines on screen */
       line([-0.55,-0.42,-0.29],[-0.30,-0.42,-0.29], CODE);
       line([-0.55,-0.34,-0.265],[-0.36,-0.34,-0.265], CODE);
-      const SEGN = 12, mR = 0.1, mTop = -0.2, mBot = -0.03, mX = 0.34, mZ = -0.12;   /* coffee mug */
-      const mb = v.length;
-      for (let i = 0; i < SEGN; i++){ const a = i / SEGN * Math.PI * 2; v.push([mX + Math.cos(a)*mR, mTop, mZ + Math.sin(a)*mR]); }
-      for (let i = 0; i < SEGN; i++){ const a = i / SEGN * Math.PI * 2; v.push([mX + Math.cos(a)*mR, mBot, mZ + Math.sin(a)*mR]); }
-      for (let i = 0; i < SEGN; i++){ const j = (i+1)%SEGN; faces.push({ q: [mb+i, mb+j, mb+SEGN+j, mb+SEGN+i], col: MUG, sh: 0.8, pri: 1 }); }
-      faces.push({ q: Array.from({length: SEGN}, (_, i) => mb + i), col: MUG, sh: 1.0, pri: 1 });   /* mug rim/top */
       box(0.24, -0.07, 0.16, 0.42, 0.02, 0.3, BOOK, 1);          /* notebook */
       line([0.05,-0.09,0.3],[0.22,-0.09,0.42], PENCIL);          /* pencil */
       line([0.22,-0.09,0.42],[0.245,-0.09,0.445], PENCIL);       /* tip */
@@ -980,7 +980,7 @@
       { sel: '#about',    shape: workspace(), side: 1,  spin: 0.0002,  col: '52,80,224', lw: 1.2, float: true, solid: true },
       { sel: '#work',     shape: tree(),      side: -1, spin: 0.00022, col: '14,154,108', lw: 2.6, fat: true, label: 'DECISION TREE' },
       { sel: '#skills',   shape: wave(),      side: 1,  spin: 0.00008, wave: true, col: '123,63,228', label: 'GRADIENT DESCENT' },
-      { sel: '#thoughts', shape: thinkingEmoji(), solid: true, side: -1, spin: 0.00018, col: '236,170,40', lw: 1.0, mag: 1.05 },
+      { sel: '#thoughts', shape: thinkingEmoji(), solid: true, flat: true, side: -1, spin: 0.00016, col: '236,170,40', lw: 1.0, mag: 1.0 },
       { sel: '#hobbies',  rubik: makeRubik(), side: 1,  spin: 0.00014, col: '52,80,224', label: "RUBIK'S CUBE", labelDrop: 0.18 }
     ].map(s => ({ ...s, el: document.querySelector(s.sel) })).filter(s => s.el);
 
@@ -1028,10 +1028,11 @@
       const rx = (def.wave ? 0.95 : 0.42 + Math.sin(t * 0.00012) * 0.1) + (def.pitch || 0);
       const cosY = Math.cos(ry), sinY = Math.sin(ry);
       const cosX = Math.cos(rx), sinX = Math.sin(rx);
+      const PD = def.flat ? 12 : 3.4;   /* weaker perspective for flat-ish shapes (emoji) */
       const proj = (x, y, z) => {
         let px = x * cosY + z * sinY, pz = -x * sinY + z * cosY;   /* yaw about vertical */
         let py = y * cosX - pz * sinX; pz = y * sinX + pz * cosX;  /* pitch about horizontal — no roll */
-        const f = 3.4 / (3.4 + pz);
+        const f = PD / (PD + pz);
         return [cx + px * scale * f, cy + py * scale * f, pz];
       };
       /* label: fixed under the shape, bobbing gently, never rotating */
@@ -1082,10 +1083,9 @@
         /* draw furniture (pri 0) then items (pri 1); far-to-near within each group */
         const faces = geom.faces.map(f => {
           const q = f.q.map(i => pts[i]);
-          return { q, col: f.col, sh: f.sh, pri: f.pri, glass: f.glass, d: q.reduce((s, p) => s + p[2], 0) / q.length };
+          return { q, col: f.col, sh: f.sh, pri: f.pri, glass: f.glass, ol: f.ol, d: q.reduce((s, p) => s + p[2], 0) / q.length };
         }).sort((a, b) => (a.pri - b.pri) || (a.d - b.d));
-        ctx.lineWidth = def.lw || 1;
-        faces.forEach(({ q, col, sh, glass }) => {
+        faces.forEach(({ q, col, sh, glass, ol }) => {
           const r = Math.round(col[0] * sh), g = Math.round(col[1] * sh), b = Math.round(col[2] * sh);
           ctx.beginPath();
           ctx.moveTo(q[0][0], q[0][1]);
@@ -1098,7 +1098,13 @@
             ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + A + ')';
           }
           ctx.fill();
-          ctx.strokeStyle = 'rgba(' + Math.round(r*0.6) + ',' + Math.round(g*0.6) + ',' + Math.round(b*0.6) + ',' + A + ')';
+          if (ol === 'none'){                                    /* smooth body — outline hidden (matches fill) */
+            ctx.strokeStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + A + ')'; ctx.lineWidth = 1;
+          } else if (ol === 'black'){                            /* crisp black feature outline */
+            ctx.strokeStyle = 'rgba(24,20,16,' + Math.min(A + 0.1, 1) + ')'; ctx.lineWidth = 1.6;
+          } else {                                               /* default: darker shade of the fill */
+            ctx.strokeStyle = 'rgba(' + Math.round(r*0.6) + ',' + Math.round(g*0.6) + ',' + Math.round(b*0.6) + ',' + A + ')'; ctx.lineWidth = def.lw || 1;
+          }
           ctx.stroke();
         });
         geom.lines.forEach(({ a, b, col }) => {
