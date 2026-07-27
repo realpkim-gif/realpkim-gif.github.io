@@ -819,46 +819,66 @@
       }
       return { v, e };
     }
-    /* lightbulb: round A-series glass + screw base + glowing capital-P filament (y+ down) */
-    function lightbulb(){
-      const v = [], e = [];
-      const SEG = 18, step = 3;
-      const ring = (y, r) => {
+    /* balancing scale: wood base, bronze column, gently oscillating beam + two hanging pans.
+       Rebuilt each frame (t) so the beam sways and the pans swing to stay level. */
+    function scaleGeom(t){
+      const v = [], faces = [], lines = [];
+      const WOOD = [150, 108, 66], WOOD_HI = [172, 128, 82], BRONZE = [198, 150, 92], BRONZE_D = [168, 120, 68];
+      const face = (idx, col, sh) => faces.push({ q: idx, col, sh, pri: 1 });
+      const line = (a, b, col) => { v.push(a, b); lines.push({ a: v.length - 2, b: v.length - 1, col }); };
+      const rotZ = (p, th, pv) => {                          /* rotate about pivot in the x-y plane */
+        const dx = p[0] - pv[0], dy = p[1] - pv[1], c = Math.cos(th), s = Math.sin(th);
+        return [pv[0] + dx * c - dy * s, pv[1] + dx * s + dy * c, p[2]];
+      };
+      /* vertical cylinder cx,cz between yTop..yBot; radial light shading for a metallic feel */
+      const cyl = (cx, cz, yTop, yBot, r, seg, col, cap) => {
         const b = v.length;
-        for (let i = 0; i < SEG; i++){
-          const a = i / SEG * Math.PI * 2;
-          v.push([Math.cos(a) * r, y, Math.sin(a) * r]);
-        }
-        for (let i = 0; i < SEG; i++) e.push([b + i, b + (i + 1) % SEG]);
+        for (let i = 0; i < seg; i++){ const a = i / seg * Math.PI * 2; v.push([cx + Math.cos(a) * r, yTop, cz + Math.sin(a) * r]); }
+        for (let i = 0; i < seg; i++){ const a = i / seg * Math.PI * 2; v.push([cx + Math.cos(a) * r, yBot, cz + Math.sin(a) * r]); }
+        for (let i = 0; i < seg; i++){ const j = (i + 1) % seg; face([b+i, b+j, b+seg+j, b+seg+i], col, 0.66 + 0.34 * Math.cos(i / seg * Math.PI * 2 - 0.6)); }
+        if (cap) face(Array.from({ length: seg }, (_, i) => b + i), col, 1.0);
         return b;
       };
-      /* rounded glass profile: near-spherical bulb necking into the base */
-      const prof = [[-1.0, 0.06], [-0.9, 0.28], [-0.78, 0.46], [-0.62, 0.58],
-                    [-0.44, 0.63], [-0.26, 0.61], [-0.08, 0.5], [0.06, 0.34], [0.16, 0.24]];
-      const gr = prof.map(([y, r]) => ring(y, r));
-      for (let k = 1; k < gr.length; k++){                 /* longitude ties */
-        for (let i = 0; i < SEG; i += step) e.push([gr[k - 1] + i, gr[k] + i]);
-      }
-      const top = v.length; v.push([0, -1.07, 0]);         /* crown cap */
-      for (let i = 0; i < SEG; i += step) e.push([top, gr[0] + i]);
-      const glassCount = v.length;                          /* glass = everything so far */
-      /* screw base: stacked thread rings */
-      const b1 = ring(0.2, 0.24), b2 = ring(0.3, 0.23), b3 = ring(0.4, 0.21), b4 = ring(0.49, 0.15);
-      [[b1, b2], [b2, b3], [b3, b4]].forEach(([a, b]) => { for (let i = 0; i < SEG; i += step) e.push([a + i, b + i]); });
-      const tip = v.length; v.push([0, 0.58, 0]);           /* contact tip */
-      for (let i = 0; i < SEG; i += 5) e.push([tip, b4 + i]);
-      /* filament shaped as a solid capital P, built from filled rectangular prisms */
-      const filStart = v.length, filBoxes = [], hz = 0.07;
-      const prism = (cx2, cy2, hw, hh) => {                 /* axis-aligned box in x/y, thin in z */
-        filBoxes.push(v.length);
-        [[cx2-hw,cy2-hh,-hz],[cx2+hw,cy2-hh,-hz],[cx2+hw,cy2+hh,-hz],[cx2-hw,cy2+hh,-hz],
-         [cx2-hw,cy2-hh,hz],[cx2+hw,cy2-hh,hz],[cx2+hw,cy2+hh,hz],[cx2-hw,cy2+hh,hz]].forEach(p => v.push(p));
+      /* oriented box from 8 pre-transformed corners */
+      const boxV = (cs, col) => {
+        const b = v.length; cs.forEach(p => v.push(p));
+        const F = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+        const sh = [1.0, 0.58, 0.86, 0.72, 0.86, 0.72];
+        F.forEach((f, i) => face(f.map(k => b + k), col, sh[i]));
       };
-      prism(-0.14, -0.22, 0.06, 0.38);                      /* stem (full height, left) */
-      prism( 0.01, -0.55, 0.16, 0.06);                      /* top bar */
-      prism( 0.12, -0.40, 0.06, 0.19);                      /* right bar (upper) */
-      prism( 0.01, -0.22, 0.16, 0.06);                      /* middle bar */
-      return { v, e, glassCount, filStart, filBoxes };
+
+      /* ---- base: two wooden tiers + a bronze collar ---- */
+      cyl(0, 0, 0.78, 0.92, 0.46, 22, WOOD, true);          /* wide foot */
+      cyl(0, 0, 0.66, 0.78, 0.34, 20, WOOD_HI, true);       /* upper tier */
+      cyl(0, 0, 0.6,  0.66, 0.12, 16, BRONZE, true);        /* bronze collar */
+      /* ---- column ---- */
+      cyl(0, 0, -0.86, 0.6, 0.055, 14, BRONZE, false);      /* pillar */
+      cyl(0, 0, -0.98, -0.82, 0.1, 14, BRONZE, true);       /* pivot knob */
+      const finial = cyl(0, 0, -1.14, -0.98, 0.07, 12, BRONZE, true);   /* top finial */
+      face(Array.from({ length: 12 }, (_, i) => finial + i), BRONZE, 1.0);
+
+      /* ---- beam (sways) + pans (hang level) ---- */
+      const th = 0.16 * Math.sin(t * 0.00085);
+      const piv = [0, -0.9, 0], bx = 0.78;
+      const beam = [
+        [-bx,-0.95,-0.05],[bx,-0.95,-0.05],[bx,-0.95,0.05],[-bx,-0.95,0.05],
+        [-bx,-0.85,-0.05],[bx,-0.85,-0.05],[bx,-0.85,0.05],[-bx,-0.85,0.05]
+      ].map(p => rotZ(p, th, piv));
+      boxV(beam, BRONZE);
+      [-1, 1].forEach(sgn => {
+        const end = rotZ([sgn * bx, -0.9, 0], th, piv);      /* beam tip after sway */
+        cyl(end[0], end[2], end[1] - 0.05, end[1] + 0.05, 0.06, 10, BRONZE, true);   /* end cap */
+        const pcY = end[1] + 0.62;                           /* pan hangs straight down */
+        const seg = 16, R = 0.28, ring = v.length;
+        for (let i = 0; i < seg; i++){ const a = i / seg * Math.PI * 2; v.push([end[0] + Math.cos(a) * R, pcY, end[2] + Math.sin(a) * R]); }
+        const cen = v.length; v.push([end[0], pcY + 0.11, end[2]]);   /* shallow bowl */
+        for (let i = 0; i < seg; i++){ const j = (i + 1) % seg; face([ring+i, ring+j, cen], BRONZE, 0.62 + 0.28 * Math.cos(i / seg * Math.PI * 2 - 0.6)); }
+        for (let k = 0; k < 3; k++){                          /* three hanging chains */
+          const a = (k / 3) * Math.PI * 2 + 0.5;
+          line(end, [end[0] + Math.cos(a) * R, pcY, end[2] + Math.sin(a) * R], BRONZE_D);
+        }
+      });
+      return { v, faces, lines };
     }
     /* floating mini desk: laptop, coffee, notebook, pencil (y+ is down) */
     function workspace(){
@@ -887,7 +907,7 @@
       box(-0.62, -0.09, -0.18, 0.5, 0.045, 0.36, SILVER, 1);     /* laptop base */
       const sb = v.length;                                        /* laptop screen tilted back */
       [[-0.62,-0.09,-0.18],[-0.12,-0.09,-0.18],[-0.12,-0.55,-0.34],[-0.62,-0.55,-0.34]].forEach(p => v.push(p));
-      faces.push({ q: [sb, sb+1, sb+2, sb+3], col: SCREEN, sh: 0.95, pri: 1 });
+      faces.push({ q: [sb, sb+1, sb+2, sb+3], col: SCREEN, sh: 0.95, pri: 1, glass: true });   /* monitor: see-through */
       line([-0.55,-0.5,-0.315],[-0.19,-0.5,-0.315], CODE);       /* code lines on screen */
       line([-0.55,-0.42,-0.29],[-0.30,-0.42,-0.29], CODE);
       line([-0.55,-0.34,-0.265],[-0.36,-0.34,-0.265], CODE);
@@ -895,8 +915,8 @@
       const mb = v.length;
       for (let i = 0; i < SEGN; i++){ const a = i / SEGN * Math.PI * 2; v.push([mX + Math.cos(a)*mR, mTop, mZ + Math.sin(a)*mR]); }
       for (let i = 0; i < SEGN; i++){ const a = i / SEGN * Math.PI * 2; v.push([mX + Math.cos(a)*mR, mBot, mZ + Math.sin(a)*mR]); }
-      for (let i = 0; i < SEGN; i++){ const j = (i+1)%SEGN; faces.push({ q: [mb+i, mb+j, mb+SEGN+j, mb+SEGN+i], col: MUG, sh: 0.8, pri: 1 }); }
-      faces.push({ q: Array.from({length: SEGN}, (_, i) => mb + i), col: [92,62,46], sh: 1.0, pri: 1 });   /* coffee surface */
+      for (let i = 0; i < SEGN; i++){ const j = (i+1)%SEGN; faces.push({ q: [mb+i, mb+j, mb+SEGN+j, mb+SEGN+i], col: MUG, sh: 0.8, pri: 1, glass: true }); }   /* mug: see-through */
+      faces.push({ q: Array.from({length: SEGN}, (_, i) => mb + i), col: [92,62,46], sh: 1.0, pri: 1, glass: true });   /* coffee surface */
       box(0.24, -0.07, 0.16, 0.42, 0.02, 0.3, BOOK, 1);          /* notebook */
       line([0.05,-0.09,0.3],[0.22,-0.09,0.42], PENCIL);          /* pencil */
       line([0.22,-0.09,0.42],[0.245,-0.09,0.445], PENCIL);       /* tip */
@@ -965,7 +985,7 @@
       { sel: '#about',    shape: workspace(), side: 1,  spin: 0.0002,  col: '52,80,224', lw: 1.2, float: true, solid: true },
       { sel: '#work',     shape: tree(),      side: -1, spin: 0.00022, col: '14,154,108', lw: 2.6, fat: true, label: 'DECISION TREE' },
       { sel: '#skills',   shape: wave(),      side: 1,  spin: 0.00008, wave: true, col: '123,63,228', label: 'GRADIENT DESCENT' },
-      { sel: '#thoughts', shape: lightbulb(), bulb: true, side: -1, spin: 0.00028, col: '219,39,119', lw: 1.3, mag: 1.05 },
+      { sel: '#thoughts', build: scaleGeom, solid: true, side: -1, spin: 0.00022, col: '198,150,92', lw: 1.1, mag: 1.12 },
       { sel: '#hobbies',  rubik: makeRubik(), side: 1,  spin: 0.00014, col: '52,80,224', label: "RUBIK'S CUBE", labelDrop: 0.18 }
     ].map(s => ({ ...s, el: document.querySelector(s.sel) })).filter(s => s.el);
 
@@ -1059,26 +1079,31 @@
         return;
       }
 
-      /* solid shape (desk): bg-filled faces occlude back edges, thin details on top */
+      /* solid shape (desk / scale): opaque faces occlude via a bg underlayer; glass faces stay see-through */
       if (def.solid){
-        const geom = def.shape;
+        const geom = def.build ? def.build(t) : def.shape;
         const pts = geom.v.map(([x, y, z]) => proj(x, y, z));
-        const A = Math.min(op * 2.9, 0.86);   /* more opaque so the colors read */
+        const A = Math.min(op * 3.1, 0.94);
         /* draw furniture (pri 0) then items (pri 1); far-to-near within each group */
         const faces = geom.faces.map(f => {
           const q = f.q.map(i => pts[i]);
-          return { q, col: f.col, sh: f.sh, pri: f.pri, d: q.reduce((s, p) => s + p[2], 0) / q.length };
+          return { q, col: f.col, sh: f.sh, pri: f.pri, glass: f.glass, d: q.reduce((s, p) => s + p[2], 0) / q.length };
         }).sort((a, b) => (a.pri - b.pri) || (a.d - b.d));
         ctx.lineWidth = def.lw || 1;
-        faces.forEach(({ q, col, sh }) => {
+        faces.forEach(({ q, col, sh, glass }) => {
           const r = Math.round(col[0] * sh), g = Math.round(col[1] * sh), b = Math.round(col[2] * sh);
-          ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + A + ')';
-          ctx.strokeStyle = 'rgba(' + Math.round(r*0.62) + ',' + Math.round(g*0.62) + ',' + Math.round(b*0.62) + ',' + A + ')';
           ctx.beginPath();
           ctx.moveTo(q[0][0], q[0][1]);
           for (let i = 1; i < q.length; i++) ctx.lineTo(q[i][0], q[i][1]);
           ctx.closePath();
+          if (glass){
+            ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + (A * 0.5) + ')';   /* see-through */
+          } else {
+            ctx.fillStyle = '#F7F7F4'; ctx.fill();                                       /* opaque underlayer occludes */
+            ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + A + ')';
+          }
           ctx.fill();
+          ctx.strokeStyle = 'rgba(' + Math.round(r*0.6) + ',' + Math.round(g*0.6) + ',' + Math.round(b*0.6) + ',' + A + ')';
           ctx.stroke();
         });
         geom.lines.forEach(({ a, b, col }) => {
@@ -1110,52 +1135,8 @@
           ctx.fill();
         });
       } else {
-        const skip = def.bulb ? geom.filStart : Infinity;   /* P prisms drawn separately, no dots */
         ctx.fillStyle = 'rgba(' + def.col + ',' + Math.min(op * 1.6, 0.55) + ')';
-        pts.forEach((p, i) => { if (i < skip) ctx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
-      }
-
-      /* lightbulb: occasionally lights up with a warm yellow aura + glowing filament */
-      if (def.bulb){
-        const g = def.shape;
-        let gx = 0, gy = 0;                       /* glass center in screen space */
-        for (let i = 0; i < g.glassCount; i++){ gx += pts[i][0]; gy += pts[i][1]; }
-        gx /= g.glassCount; gy /= g.glassCount;
-        const cyc = (t * 0.00016 + 0.15) % 1;     /* on ~30% of the time */
-        const target = cyc < 0.3 ? 1 : 0;
-        def.lit = (def.lit || 0) + (target - (def.lit || 0)) * 0.07;
-        const L = def.lit;
-        if (L > 0.02){
-          const rg = ctx.createRadialGradient(gx, gy, scale * 0.08, gx, gy, scale * 1.7);
-          rg.addColorStop(0, 'rgba(253,214,92,' + (0.32 * L * vis) + ')');
-          rg.addColorStop(0.45, 'rgba(252,196,74,' + (0.14 * L * vis) + ')');
-          rg.addColorStop(1, 'rgba(252,196,74,0)');
-          ctx.fillStyle = rg;
-          ctx.fillRect(gx - scale * 1.7, gy - scale * 1.7, scale * 3.4, scale * 3.4);
-        }
-        /* solid capital-P prisms — always visible; warm amber, brightening when lit */
-        const pr = Math.round(224 + (252 - 224) * L);
-        const pg = Math.round(168 + (214 - 168) * L);
-        const pb = Math.round(74 + (92 - 74) * L);
-        const faceA = Math.min(op * 2.6, 0.78);
-        const BF = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
-        const pf = [];
-        g.filBoxes.forEach(base => BF.forEach(fi => {
-          const q = fi.map(i => pts[base + i]);
-          pf.push({ q, d: (q[0][2] + q[1][2] + q[2][2] + q[3][2]) / 4 });
-        }));
-        pf.sort((a, b) => b.d - a.d);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(' + pr + ',' + pg + ',' + pb + ',' + Math.min(faceA * 1.15, 0.9) + ')';
-        pf.forEach(({ q }) => {
-          ctx.fillStyle = 'rgba(' + pr + ',' + pg + ',' + pb + ',' + faceA + ')';
-          ctx.beginPath();
-          ctx.moveTo(q[0][0], q[0][1]);
-          for (let i = 1; i < 4; i++) ctx.lineTo(q[i][0], q[i][1]);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        });
+        pts.forEach(p => { ctx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
       }
 
       /* gradient descent on the bowl: several balls race to the minimum */
