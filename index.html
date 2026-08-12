@@ -873,12 +873,13 @@
       bar( 0.12, -0.52,  0.52, -0.36, 0.98, 0.10, 0.05, BROW, 'black'); /* right brow (raised, skeptical) */
       bar(-0.20, 0.36, 0.30, 0.30, 1.00, 0.09, 0.05, MOUTH, 'black');   /* flat, slightly slanted mouth */
 
-      /* hand on the chin — popped well forward, loose fist with four fingers, thumb + extended index */
-      box(0.02, 0.66, 1.06, 0.5, 0.34, 0.28, HAND, 'black');   /* fist */
-      [-0.17, -0.055, 0.06, 0.175].forEach((fx, k) =>          /* four curled fingers on the front */
-        box(fx, 0.5, 1.2, 0.1, 0.24, 0.16, HAND, 'black'));
-      bar(0.05, 0.52, -0.26, 0.08, 1.12, 0.16, 0.17, HAND, 'black');   /* index finger up the cheek */
-      bar(0.26, 0.62, 0.4, 0.36, 1.02, 0.15, 0.16, HAND, 'black');     /* thumb up the jaw */
+      /* hand cradling the chin (low, popped forward): fist + three curled fingers,
+         index finger extended up the cheek, thumb tucked under the chin */
+      box(-0.04, 0.84, 1.02, 0.46, 0.26, 0.28, HAND, 'black');         /* fist/palm at the chin */
+      [-0.16, -0.03, 0.10].forEach(fx =>                               /* three curled fingers */
+        box(fx, 0.68, 1.12, 0.11, 0.22, 0.15, HAND, 'black'));
+      bar(0.16, 0.70, 0.34, 0.24, 1.06, 0.15, 0.16, HAND, 'black');    /* index finger extended up the cheek */
+      bar(-0.20, 0.82, -0.36, 0.58, 1.02, 0.14, 0.15, HAND, 'black');  /* thumb tucked under the chin */
       return { v, faces, lines };
     }
     /* floating mini desk: laptop, coffee, notebook, pencil (y+ is down) */
